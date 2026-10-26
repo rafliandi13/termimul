@@ -4,3 +4,4 @@ frontend/dist
 frontend/package.json.md5
 *.syso
 build/windows/installer/tmp/
+build/windows/installer/wails_tools.nsh
