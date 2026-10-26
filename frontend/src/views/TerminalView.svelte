@@ -5,7 +5,7 @@
   import { WebLinksAddon } from '@xterm/addon-web-links'
   import '@xterm/xterm/css/xterm.css'
   import * as TerminalSvc from '../../wailsjs/go/services/TerminalService'
-  import { EventsOn, EventsOff, BrowserOpenURL } from '../../wailsjs/runtime/runtime'
+  import { EventsOn, EventsOff, BrowserOpenURL, ClipboardGetText, ClipboardSetText } from '../../wailsjs/runtime/runtime'
   import type { Status } from '../lib/types'
 
   let {
@@ -43,6 +43,49 @@
     fit.fit()
   }
 
+  function copySelection() {
+    const text = term?.getSelection()
+    if (!text) return
+    ClipboardSetText(text)
+    term?.clearSelection()
+  }
+
+  async function pasteClipboard() {
+    const text = await ClipboardGetText()
+    // term.paste handles bracketed paste mode and line endings, then fires onData.
+    if (text) term?.paste(text)
+  }
+
+  // Ctrl+C copies when text is selected and is still SIGINT otherwise; Ctrl+V
+  // pastes. Ctrl+Shift+C/V and Cmd+C/V (macOS) do the same. Returning false
+  // stops xterm from also sending the key to the server.
+  function handleKey(e: KeyboardEvent): boolean {
+    if (!(e.ctrlKey || e.metaKey) || e.altKey) return true
+    const key = e.key.toLowerCase()
+    if (key === 'c' && (term?.hasSelection() || e.shiftKey || e.metaKey)) {
+      if (e.type === 'keydown') {
+        e.preventDefault()
+        copySelection()
+      }
+      return false
+    }
+    if (key === 'v') {
+      if (e.type === 'keydown') {
+        e.preventDefault() // also suppresses the browser's own paste event, so text isn't pasted twice
+        pasteClipboard()
+      }
+      return false
+    }
+    return true
+  }
+
+  // Right click copies the selection, or pastes when nothing is selected.
+  function onContextMenu(e: MouseEvent) {
+    e.preventDefault()
+    if (term?.hasSelection()) copySelection()
+    else pasteClipboard()
+  }
+
   async function connect() {
     if (!term) return
     onstatus('connecting')
@@ -68,6 +111,8 @@
     term.loadAddon(fit)
     term.loadAddon(new WebLinksAddon((_e, uri) => BrowserOpenURL(uri)))
     term.open(el)
+    term.attachCustomKeyEventHandler(handleKey)
+    el.addEventListener('contextmenu', onContextMenu)
     refit()
 
     EventsOn(dataEvent, (b64: string) => term?.write(decode(b64)))
@@ -100,6 +145,7 @@
     EventsOff(dataEvent)
     EventsOff(closedEvent)
     observer?.disconnect()
+    el?.removeEventListener('contextmenu', onContextMenu)
     TerminalSvc.Disconnect(sessionId)
     term?.dispose()
   })

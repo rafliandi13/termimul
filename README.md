@@ -23,6 +23,8 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 - **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the tab; a dropped connection keeps it open with a **Reconnect** button.
 
 Keyboard shortcuts: `Ctrl+Tab` / `Ctrl+Shift+Tab` switch tabs, `Ctrl+W` closes the current tab.
+In a terminal: `Ctrl+C` copies the selection (and sends interrupt when nothing is selected), `Ctrl+V` pastes,
+right click copies or pastes; `Ctrl+Shift+C/V` and `Cmd+C/V` on macOS also work.
 In the SFTP browser: `Enter` opens, `F2` renames, `Del` deletes.
 
 ## Install
