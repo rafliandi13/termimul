@@ -1,0 +1,96 @@
+:root {
+  /* Sampled from the logo: charcoal #232323 and cyan #00e5fc. */
+  --bg: #1b1b1b;
+  --bg-raised: #232323;
+  --bg-hover: #2e2e2e;
+  --bg-input: #161616;
+  --border: #353535;
+  --text: #e8eaeb;
+  --text-muted: #8f979a;
+  --accent: #00e5fc;
+  --accent-soft: #00e5fc1f;
+  --accent-text: #00282d;
+  --term-bg: #161616;
+  --danger: #f06a6a;
+  --radius: 8px;
+  color-scheme: dark;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html,
+body,
+#app {
+  height: 100%;
+  margin: 0;
+}
+
+body {
+  background: var(--bg);
+  color: var(--text);
+  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  overflow: hidden;
+  user-select: none;
+}
+
+input,
+select,
+button {
+  font: inherit;
+  color: inherit;
+}
+
+input,
+select {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 7px 10px;
+  user-select: text;
+}
+
+input:focus,
+select:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+button {
+  cursor: pointer;
+  border: 1px solid var(--border);
+  background: var(--bg-raised);
+  border-radius: 6px;
+  padding: 7px 14px;
+}
+
+button:hover {
+  background: var(--bg-hover);
+}
+
+button:focus-visible {
+  outline: 2px solid var(--accent);
+  outline-offset: 1px;
+}
+
+button.primary {
+  background: var(--accent);
+  border-color: var(--accent);
+  color: var(--accent-text);
+  font-weight: 600;
+}
+
+button.primary:hover {
+  filter: brightness(1.08);
+}
+
+button.ghost {
+  border-color: transparent;
+  background: transparent;
+}
+
+button.ghost:hover {
+  background: var(--bg-hover);
+}
