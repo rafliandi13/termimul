@@ -17,6 +17,7 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 - **Host manager**: add, edit, and delete hosts; organise them into groups; search by name, address, or user.
 - **Keychain**: generate ED25519 / RSA 4096 / ECDSA keys or import existing ones (including passphrase-protected keys), and copy the public key in one click. Keys are stored encrypted inside Termimus, so hosts don't depend on a key file path.
 - **SFTP file browser**: browse, upload, download (files and whole folders), rename, delete, create folders, and drag files in from your file manager, with progress reporting.
+- **Export / import**: move all hosts, passwords, keychain keys and known hosts to another device (any OS) as one `.termimus` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
 - **Known hosts**: you confirm a server's fingerprint the first time you connect; changed keys are refused. View, delete, or import entries from `~/.ssh/known_hosts`.
 - **Encrypted credentials**: passwords and keys are encrypted with the OS credential store (see below) and never sent to the UI.
 - **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the tab; a dropped connection keeps it open with a **Reconnect** button.
@@ -89,16 +90,34 @@ installers to a GitHub release.
 
 ### Project layout
 
-| Path | Purpose |
-| --- | --- |
-| `main.go`, `app.go` | Window setup and the methods exposed to the frontend |
-| `ssh.go` | SSH sessions, authentication, host key verification |
-| `sftp.go` | SFTP browsing and transfers |
-| `store.go`, `keys.go` | Host list and keychain persistence |
-| `knownhosts.go` | Known hosts management |
-| `secret_windows.go`, `secret_other.go` | OS-specific encryption of stored secrets |
-| `frontend/src/` | Svelte 5 + TypeScript UI |
-| `build/linux/` | `.deb` packaging and desktop entry |
+```
+main.go                  window options; binds the services
+internal/
+  services/              the only layer the frontend calls (and the only one that imports Wails)
+    services.go          wiring, startup/shutdown, host-key prompt
+    data.go              HostService, KeychainService, KnownHostService
+    backup.go            BackupService (export / import)
+    sessions.go          TerminalService, SFTPService (push output/progress as events)
+  vault/                 hosts.json: hosts + keychain, format migration, snapshot/merge
+  backup/                password-protected .termimus export files
+  secret/                encryption at rest: DPAPI (Windows), Keychain / Secret Service + AES-GCM
+  sshx/                  dialing, authentication, keep-alive
+  knownhosts/            trust-on-first-use verification and known_hosts management
+  terminal/              interactive PTY sessions
+  sftpx/                 SFTP listing, file operations, recursive transfers
+  sshtest/               throwaway SSH/SFTP servers for tests
+  fsutil/                atomic writes, ~ expansion
+frontend/src/
+  App.svelte             tabs and navigation
+  views/                 Hosts, Keychain, Known Hosts, Terminal, SFTP screens
+  components/            dialogs, forms, icons
+  lib/                   shared types and helpers
+build/                   icons, Windows installer, macOS Info.plist, Linux packaging
+```
+
+Wails generates `frontend/wailsjs/go/services/*` from the service methods, so the
+frontend calls e.g. `HostService.List()` with full TypeScript types. Packages under
+`internal/` don't depend on Wails and are tested on their own (`go test ./...`).
 
 ## Roadmap
 

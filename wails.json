@@ -13,7 +13,7 @@
   "info": {
     "companyName": "Termimus",
     "productName": "Termimus",
-    "productVersion": "0.2.0",
+    "productVersion": "0.3.0",
     "copyright": "Copyright (c) 2026 rafliandi13. MIT License.",
     "comments": "Lightweight open-source SSH client"
   }

@@ -1,4 +1,54 @@
-export namespace main {
+export namespace knownhosts {
+	
+	export class Entry {
+	    id: string;
+	    hosts: string;
+	    keyType: string;
+	    fingerprint: string;
+	    hashed: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new Entry(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.hosts = source["hosts"];
+	        this.keyType = source["keyType"];
+	        this.fingerprint = source["fingerprint"];
+	        this.hashed = source["hashed"];
+	    }
+	}
+
+}
+
+export namespace services {
+	
+	export class ImportResult {
+	    hostsAdded: number;
+	    hostsSkipped: number;
+	    keysAdded: number;
+	    keysSkipped: number;
+	    knownHostsAdded: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new ImportResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hostsAdded = source["hostsAdded"];
+	        this.hostsSkipped = source["hostsSkipped"];
+	        this.keysAdded = source["keysAdded"];
+	        this.keysSkipped = source["keysSkipped"];
+	        this.knownHostsAdded = source["knownHostsAdded"];
+	    }
+	}
+
+}
+
+export namespace sftpx {
 	
 	export class FileEntry {
 	    name: string;
@@ -24,6 +74,11 @@ export namespace main {
 	        this.isLink = source["isLink"];
 	    }
 	}
+
+}
+
+export namespace vault {
+	
 	export class Host {
 	    id: string;
 	    label: string;
@@ -112,26 +167,6 @@ export namespace main {
 	        this.fingerprint = source["fingerprint"];
 	        this.publicKey = source["publicKey"];
 	        this.createdAt = source["createdAt"];
-	    }
-	}
-	export class KnownHost {
-	    id: string;
-	    hosts: string;
-	    keyType: string;
-	    fingerprint: string;
-	    hashed: boolean;
-	
-	    static createFrom(source: any = {}) {
-	        return new KnownHost(source);
-	    }
-	
-	    constructor(source: any = {}) {
-	        if ('string' === typeof source) source = JSON.parse(source);
-	        this.id = source["id"];
-	        this.hosts = source["hosts"];
-	        this.keyType = source["keyType"];
-	        this.fingerprint = source["fingerprint"];
-	        this.hashed = source["hashed"];
 	    }
 	}
 

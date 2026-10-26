@@ -13,6 +13,8 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/linux"
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
+
+	"termimus/internal/services"
 )
 
 //go:embed all:frontend/dist
@@ -26,7 +28,7 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	app, err := NewApp(filepath.Join(configDir, "termimus"))
+	svc, err := services.New(filepath.Join(configDir, "termimus"))
 	if err != nil {
 		log.Fatal(err)
 	}
@@ -56,16 +58,14 @@ func main() {
 		Linux: &linux.Options{
 			ProgramName: "termimus", // matches StartupWMClass in the .desktop file
 		},
-		// Lets files be dragged from Explorer into an SFTP tab.
+		// Lets files be dragged from the file manager into an SFTP tab.
 		DragAndDrop: &options.DragAndDrop{
 			EnableFileDrop:     true,
 			DisableWebViewDrop: true,
 		},
-		OnStartup:        app.startup,
-		OnShutdown:       app.shutdown,
-		Bind: []interface{}{
-			app,
-		},
+		OnStartup:  svc.Startup,
+		OnShutdown: svc.Shutdown,
+		Bind:       svc.Bind(),
 	})
 	if err != nil {
 		log.Fatal(err)

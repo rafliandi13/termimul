@@ -1,39 +1,40 @@
 <script lang="ts">
   import { onMount } from 'svelte'
-  import type { main } from '../wailsjs/go/models'
-  import { ListHosts, ListKeys, DeleteHost } from '../wailsjs/go/main/App'
-  import HostForm from './lib/HostForm.svelte'
-  import HostsView from './lib/HostsView.svelte'
-  import KeychainView from './lib/KeychainView.svelte'
-  import KnownHostsView from './lib/KnownHostsView.svelte'
-  import TerminalView from './lib/TerminalView.svelte'
-  import SftpView from './lib/SftpView.svelte'
-  import Icon from './lib/Icon.svelte'
+  import type { vault } from '../wailsjs/go/models'
+  import * as Hosts from '../wailsjs/go/services/HostService'
+  import * as Keychain from '../wailsjs/go/services/KeychainService'
   import { OnFileDrop } from '../wailsjs/runtime/runtime'
+  import HostForm from './components/HostForm.svelte'
+  import Icon from './components/Icon.svelte'
+  import HostsView from './views/HostsView.svelte'
+  import KeychainView from './views/KeychainView.svelte'
+  import KnownHostsView from './views/KnownHostsView.svelte'
+  import SftpView from './views/SftpView.svelte'
+  import TerminalView from './views/TerminalView.svelte'
   import type { Status, Tab } from './lib/types'
 
   type Section = 'hosts' | 'keychain' | 'knownhosts'
 
-  let hosts = $state<main.Host[]>([])
-  let keys = $state<main.Key[]>([])
+  let hosts = $state<vault.Host[]>([])
+  let keys = $state<vault.Key[]>([])
   let tabs = $state<Tab[]>([])
   let activeTab = $state<string | null>(null) // null = home screen
   let section = $state<Section>('hosts')
   let groupFilter = $state<string | null>(null)
-  let editing = $state<main.Host | null | undefined>(undefined) // undefined = form closed, null = new host
+  let editing = $state<vault.Host | null | undefined>(undefined) // undefined = form closed, null = new host
   let views: Record<string, TerminalView | SftpView> = {}
 
   const groups = $derived([...new Set(hosts.map((h) => h.group).filter(Boolean))].sort())
 
   async function loadHosts() {
-    hosts = await ListHosts()
+    hosts = await Hosts.List()
   }
 
   async function loadKeys() {
-    keys = await ListKeys()
+    keys = await Keychain.List()
   }
 
-  function open(h: main.Host, kind: Tab['kind'] = 'ssh') {
+  function open(h: vault.Host, kind: Tab['kind'] = 'ssh') {
     const id = crypto.randomUUID()
     tabs.push({ id, kind, hostId: h.id, title: h.label, status: 'connecting' })
     activeTab = id
@@ -58,9 +59,9 @@
     if (t) t.status = s
   }
 
-  async function removeHost(h: main.Host) {
+  async function removeHost(h: vault.Host) {
     if (!confirm(`Hapus host "${h.label}"?`)) return
-    await DeleteHost(h.id)
+    await Hosts.Delete(h.id)
     await loadHosts()
   }
 
@@ -147,6 +148,7 @@
             onsftp={(h) => open(h, 'sftp')}
             onedit={(h) => (editing = h)}
             ondelete={removeHost}
+            onimported={() => (loadHosts(), loadKeys())}
           />
         {:else if section === 'keychain'}
           <KeychainView {keys} onchange={loadKeys} />
