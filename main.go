@@ -10,6 +10,8 @@ import (
 	"github.com/wailsapp/wails/v2"
 	"github.com/wailsapp/wails/v2/pkg/options"
 	"github.com/wailsapp/wails/v2/pkg/options/assetserver"
+	"github.com/wailsapp/wails/v2/pkg/options/linux"
+	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 )
 
@@ -43,6 +45,21 @@ func main() {
 		Windows: &windows.Options{
 			WebviewGpuIsDisabled: true,
 			Theme:                windows.Dark,
+		},
+		Mac: &mac.Options{
+			Appearance: mac.NSAppearanceNameDarkAqua,
+			About: &mac.AboutInfo{
+				Title:   "Termimus",
+				Message: "Lightweight open-source SSH client\nMIT License",
+			},
+		},
+		Linux: &linux.Options{
+			ProgramName: "termimus", // matches StartupWMClass in the .desktop file
+		},
+		// Lets files be dragged from Explorer into an SFTP tab.
+		DragAndDrop: &options.DragAndDrop{
+			EnableFileDrop:     true,
+			DisableWebViewDrop: true,
 		},
 		OnStartup:        app.startup,
 		OnShutdown:       app.shutdown,

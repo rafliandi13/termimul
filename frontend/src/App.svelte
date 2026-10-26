@@ -1,44 +1,48 @@
 <script lang="ts">
   import { onMount } from 'svelte'
   import type { main } from '../wailsjs/go/models'
-  import { ListHosts, DeleteHost } from '../wailsjs/go/main/App'
+  import { ListHosts, ListKeys, DeleteHost } from '../wailsjs/go/main/App'
   import HostForm from './lib/HostForm.svelte'
+  import HostsView from './lib/HostsView.svelte'
+  import KeychainView from './lib/KeychainView.svelte'
+  import KnownHostsView from './lib/KnownHostsView.svelte'
   import TerminalView from './lib/TerminalView.svelte'
+  import SftpView from './lib/SftpView.svelte'
+  import Icon from './lib/Icon.svelte'
+  import { OnFileDrop } from '../wailsjs/runtime/runtime'
   import type { Status, Tab } from './lib/types'
 
+  type Section = 'hosts' | 'keychain' | 'knownhosts'
+
   let hosts = $state<main.Host[]>([])
+  let keys = $state<main.Key[]>([])
   let tabs = $state<Tab[]>([])
-  let activeTab = $state<string | null>(null) // null = hosts screen
-  let editing = $state<main.Host | null | undefined>(undefined) // undefined = form closed, null = new host
-  let query = $state('')
+  let activeTab = $state<string | null>(null) // null = home screen
+  let section = $state<Section>('hosts')
   let groupFilter = $state<string | null>(null)
-  let views: Record<string, TerminalView> = {}
+  let editing = $state<main.Host | null | undefined>(undefined) // undefined = form closed, null = new host
+  let views: Record<string, TerminalView | SftpView> = {}
 
   const groups = $derived([...new Set(hosts.map((h) => h.group).filter(Boolean))].sort())
-  const visible = $derived(
-    hosts.filter((h) => {
-      if (groupFilter !== null && h.group !== groupFilter) return false
-      const q = query.trim().toLowerCase()
-      return !q || [h.label, h.address, h.username, h.group].some((v) => v.toLowerCase().includes(q))
-    }),
-  )
-  const grouped = $derived.by(() => {
-    const map = new Map<string, main.Host[]>()
-    for (const h of visible) {
-      const key = h.group || 'Tanpa grup'
-      map.set(key, [...(map.get(key) ?? []), h])
-    }
-    return [...map]
-  })
 
-  async function load() {
+  async function loadHosts() {
     hosts = await ListHosts()
   }
 
-  function open(h: main.Host) {
+  async function loadKeys() {
+    keys = await ListKeys()
+  }
+
+  function open(h: main.Host, kind: Tab['kind'] = 'ssh') {
     const id = crypto.randomUUID()
-    tabs.push({ id, hostId: h.id, title: h.label, status: 'connecting' })
+    tabs.push({ id, kind, hostId: h.id, title: h.label, status: 'connecting' })
     activeTab = id
+  }
+
+  // Files dropped from Explorer go to the SFTP tab in front, if any.
+  function fileDrop(_x: number, _y: number, paths: string[]) {
+    const t = tabs.find((t) => t.id === activeTab)
+    if (t?.kind === 'sftp') (views[t.id] as SftpView | undefined)?.drop(paths)
   }
 
   function close(id: string) {
@@ -54,15 +58,20 @@
     if (t) t.status = s
   }
 
-  async function remove(h: main.Host) {
+  async function removeHost(h: main.Host) {
     if (!confirm(`Hapus host "${h.label}"?`)) return
     await DeleteHost(h.id)
-    await load()
+    await loadHosts()
   }
 
   async function saved() {
     editing = undefined
-    await load()
+    await loadHosts()
+  }
+
+  function go(s: Section, group: string | null = null) {
+    section = s
+    groupFilter = group
   }
 
   function onkeydown(e: KeyboardEvent) {
@@ -77,7 +86,11 @@
     }
   }
 
-  onMount(load)
+  onMount(() => {
+    loadHosts()
+    loadKeys()
+    OnFileDrop(fileDrop, false)
+  })
 </script>
 
 <svelte:window {onkeydown} />
@@ -90,12 +103,13 @@
         <path d="M1068 890 1168 995 1068 1100" />
         <rect x="1208" y="1070" width="170" height="57" rx="10" />
       </svg>
-      Hosts
+      Termimus
     </button>
     {#each tabs as t (t.id)}
       <div class="tab" class:active={activeTab === t.id}>
         <button class="tab-label" onclick={() => (activeTab = t.id)} title={t.title}>
           <span class="dot {t.status}" aria-label={t.status}></span>
+          <Icon name={t.kind === 'sftp' ? 'folder' : 'terminal'} size={13} />
           {t.title}
         </button>
         <button class="tab-close" aria-label="Tutup tab {t.title}" onclick={() => close(t.id)}>×</button>
@@ -105,67 +119,57 @@
 
   <main>
     {#if activeTab === null}
-      <div class="hosts">
+      <div class="home">
         <aside>
-          <button class="filter" class:on={groupFilter === null} onclick={() => (groupFilter = null)}>
-            Semua host <span>{hosts.length}</span>
+          <button class="nav" class:on={section === 'hosts' && groupFilter === null} onclick={() => go('hosts')}>
+            <Icon name="hosts" /> Hosts <span class="count">{hosts.length}</span>
           </button>
-          {#each groups as g}
-            <button class="filter" class:on={groupFilter === g} onclick={() => (groupFilter = g)}>
-              {g} <span>{hosts.filter((h) => h.group === g).length}</span>
-            </button>
-          {/each}
+          {#if section === 'hosts'}
+            {#each groups as g}
+              <button class="nav sub" class:on={groupFilter === g} onclick={() => go('hosts', g)}>
+                {g} <span class="count">{hosts.filter((h) => h.group === g).length}</span>
+              </button>
+            {/each}
+          {/if}
+          <button class="nav" class:on={section === 'keychain'} onclick={() => go('keychain')}>
+            <Icon name="key" /> Keychain <span class="count">{keys.length}</span>
+          </button>
+          <button class="nav" class:on={section === 'knownhosts'} onclick={() => go('knownhosts')}>
+            <Icon name="fingerprint" /> Known Hosts
+          </button>
         </aside>
 
-        <section>
-          <header>
-            <input type="search" placeholder="Cari host, alamat, user…" bind:value={query} />
-            <button class="primary" onclick={() => (editing = null)}>+ Host baru</button>
-          </header>
-
-          {#if hosts.length === 0}
-            <div class="empty">
-              <p>Belum ada host tersimpan.</p>
-              <button class="primary" onclick={() => (editing = null)}>Tambah host pertama</button>
-            </div>
-          {:else if visible.length === 0}
-            <div class="empty"><p>Tidak ada host yang cocok dengan "{query}".</p></div>
-          {/if}
-
-          {#each grouped as [group, list] (group)}
-            <h3>{group}</h3>
-            <div class="grid">
-              {#each list as h (h.id)}
-                <div class="card">
-                  <button class="card-main" onclick={() => open(h)} title="Hubungkan ke {h.label}">
-                    <span class="avatar" aria-hidden="true">{h.label.slice(0, 1).toUpperCase()}</span>
-                    <span class="meta">
-                      <strong>{h.label}</strong>
-                      <small>{h.username}@{h.address}{h.port !== 22 ? `:${h.port}` : ''}</small>
-                    </span>
-                  </button>
-                  <div class="card-actions">
-                    <button class="ghost" onclick={() => (editing = h)}>Edit</button>
-                    <button class="ghost danger" onclick={() => remove(h)}>Hapus</button>
-                  </div>
-                </div>
-              {/each}
-            </div>
-          {/each}
-        </section>
+        {#if section === 'hosts'}
+          <HostsView
+            {hosts}
+            {groupFilter}
+            onopen={(h) => open(h)}
+            onsftp={(h) => open(h, 'sftp')}
+            onedit={(h) => (editing = h)}
+            ondelete={removeHost}
+          />
+        {:else if section === 'keychain'}
+          <KeychainView {keys} onchange={loadKeys} />
+        {:else}
+          <KnownHostsView />
+        {/if}
       </div>
     {/if}
 
     {#each tabs as t (t.id)}
       <div class="pane" class:hidden={activeTab !== t.id}>
-        <TerminalView
-          bind:this={views[t.id]}
-          sessionId={t.id}
-          hostId={t.hostId}
-          active={activeTab === t.id}
-          onstatus={(s) => setStatus(t.id, s)}
-          onlogout={() => close(t.id)}
-        />
+        {#if t.kind === 'sftp'}
+          <SftpView bind:this={views[t.id]} sessionId={t.id} hostId={t.hostId} onstatus={(s) => setStatus(t.id, s)} />
+        {:else}
+          <TerminalView
+            bind:this={views[t.id]}
+            sessionId={t.id}
+            hostId={t.hostId}
+            active={activeTab === t.id}
+            onstatus={(s) => setStatus(t.id, s)}
+            onlogout={() => close(t.id)}
+          />
+        {/if}
         {#if t.status === 'closed' || t.status === 'error'}
           <button class="primary reconnect" onclick={() => views[t.id]?.reconnect()}>Hubungkan ulang</button>
         {/if}
@@ -175,7 +179,14 @@
 </div>
 
 {#if editing !== undefined}
-  <HostForm host={editing} {groups} onsaved={saved} oncancel={() => (editing = undefined)} />
+  <HostForm
+    host={editing}
+    {groups}
+    {keys}
+    onsaved={saved}
+    onkeyadded={loadKeys}
+    oncancel={() => (editing = undefined)}
+  />
 {/if}
 
 <style>
@@ -218,8 +229,9 @@
   .tab.home {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: 7px;
     padding: 7px 14px;
+    font-weight: 600;
   }
   .tab.home.active {
     background: var(--bg-raised);
@@ -290,12 +302,12 @@
     bottom: 20px;
   }
 
-  .hosts {
+  .home {
     display: flex;
     height: 100%;
   }
   aside {
-    width: 200px;
+    width: 210px;
     flex-shrink: 0;
     padding: 14px 10px;
     border-right: 1px solid var(--border);
@@ -304,113 +316,32 @@
     gap: 2px;
     overflow-y: auto;
   }
-  .filter {
+  .nav {
     display: flex;
-    justify-content: space-between;
+    align-items: center;
+    gap: 10px;
     border: none;
     background: transparent;
     text-align: left;
     color: var(--text-muted);
   }
-  .filter.on {
+  .nav:hover {
+    color: var(--text);
+  }
+  .nav.on {
     background: var(--bg-hover);
     color: var(--text);
   }
-  .filter span {
+  .nav.on :global(svg) {
+    color: var(--accent);
+  }
+  .nav.sub {
+    padding-left: 40px;
+    font-size: 13px;
+  }
+  .count {
+    margin-left: auto;
     font-size: 12px;
     opacity: 0.7;
-  }
-  section {
-    flex: 1;
-    padding: 16px 20px;
-    overflow-y: auto;
-  }
-  header {
-    display: flex;
-    gap: 10px;
-    margin-bottom: 8px;
-  }
-  header input {
-    max-width: 360px;
-  }
-  h3 {
-    margin: 18px 0 8px;
-    font-size: 12px;
-    font-weight: 600;
-    text-transform: uppercase;
-    letter-spacing: 0.04em;
-    color: var(--text-muted);
-  }
-  .grid {
-    display: grid;
-    grid-template-columns: repeat(auto-fill, minmax(240px, 1fr));
-    gap: 10px;
-  }
-  .card {
-    background: var(--bg-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    overflow: hidden;
-  }
-  .card:hover {
-    border-color: #00e5fc66;
-  }
-  .card-main {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    width: 100%;
-    border: none;
-    border-radius: 0;
-    background: transparent;
-    padding: 12px;
-    text-align: left;
-  }
-  .avatar {
-    width: 34px;
-    height: 34px;
-    border-radius: 8px;
-    display: grid;
-    place-items: center;
-    background: var(--accent-soft);
-    color: var(--accent);
-    font-weight: 700;
-    flex-shrink: 0;
-  }
-  .meta {
-    display: flex;
-    flex-direction: column;
-    min-width: 0;
-  }
-  .meta strong,
-  .meta small {
-    overflow: hidden;
-    white-space: nowrap;
-    text-overflow: ellipsis;
-  }
-  .meta small {
-    color: var(--text-muted);
-  }
-  .card-actions {
-    display: flex;
-    justify-content: flex-end;
-    border-top: 1px solid var(--border);
-    padding: 2px 4px;
-  }
-  .card-actions button {
-    padding: 3px 10px;
-    font-size: 12px;
-    color: var(--text-muted);
-  }
-  .card-actions button:hover {
-    color: var(--text);
-  }
-  .card-actions .danger:hover {
-    color: var(--danger);
-  }
-  .empty {
-    padding: 60px 0;
-    text-align: center;
-    color: var(--text-muted);
   }
 </style>

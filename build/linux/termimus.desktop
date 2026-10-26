@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Termimus
+GenericName=SSH Client
+Comment=Lightweight open-source SSH client
+Exec=termimus
+Icon=termimus
+Terminal=false
+Categories=Network;RemoteAccess;System;
+Keywords=ssh;sftp;terminal;server;
+StartupWMClass=termimus

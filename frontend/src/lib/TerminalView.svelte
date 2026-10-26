@@ -60,7 +60,7 @@
     term = new Terminal({
       scrollback: 5000,
       cursorBlink: true,
-      fontFamily: '"Cascadia Mono", Consolas, "Courier New", monospace',
+      fontFamily: getComputedStyle(document.documentElement).getPropertyValue('--font-mono').trim() || 'monospace',
       fontSize: 14,
       theme: { background: '#161616', foreground: '#e8eaeb', cursor: '#00e5fc', selectionBackground: '#00e5fc44' },
     })

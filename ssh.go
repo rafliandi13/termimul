@@ -1,7 +1,6 @@
 package main
 
 import (
-	"crypto/x509"
 	"encoding/base64"
 	"errors"
 	"fmt"
@@ -32,24 +31,9 @@ func (s *sshSession) close() {
 // Connect opens a shell for hostID. The frontend picks sessionID and subscribes
 // to "ssh:data:<id>" / "ssh:closed:<id>" before calling, so no output is missed.
 func (a *App) Connect(sessionID, hostID string, cols, rows int) error {
-	host, sec, err := a.store.Get(hostID)
+	client, err := a.dial(hostID)
 	if err != nil {
 		return err
-	}
-	auth, err := authMethods(host, sec)
-	if err != nil {
-		return err
-	}
-	cfg := &ssh.ClientConfig{
-		User:            host.Username,
-		Auth:            auth,
-		HostKeyCallback: a.verifyHostKey,
-		Timeout:         15 * time.Second,
-	}
-	addr := net.JoinHostPort(host.Address, strconv.Itoa(host.Port))
-	client, err := ssh.Dial("tcp", addr, cfg)
-	if err != nil {
-		return friendlyDialError(err)
 	}
 
 	sess, err := client.NewSession()
@@ -82,7 +66,6 @@ func (a *App) Connect(sessionID, hostID string, cols, rows int) error {
 	a.mu.Unlock()
 
 	go a.pump(sessionID, stdout)
-	go keepAlive(client, a.ctx)
 	go func() {
 		err := sess.Wait()
 		a.mu.Lock()
@@ -96,6 +79,31 @@ func (a *App) Connect(sessionID, hostID string, cols, rows int) error {
 		runtime.EventsEmit(a.ctx, "ssh:closed:"+sessionID, loggedOut)
 	}()
 	return nil
+}
+
+// dial opens an authenticated SSH connection to a saved host, with keep-alive.
+func (a *App) dial(hostID string) (*ssh.Client, error) {
+	host, sec, err := a.store.Get(hostID)
+	if err != nil {
+		return nil, err
+	}
+	auth, err := authMethods(host, sec)
+	if err != nil {
+		return nil, err
+	}
+	cfg := &ssh.ClientConfig{
+		User:            host.Username,
+		Auth:            auth,
+		HostKeyCallback: a.verifyHostKey,
+		Timeout:         15 * time.Second,
+	}
+	addr := net.JoinHostPort(host.Address, strconv.Itoa(host.Port))
+	client, err := ssh.Dial("tcp", addr, cfg)
+	if err != nil {
+		return nil, friendlyDialError(err)
+	}
+	go keepAlive(client, a.ctx)
+	return client, nil
 }
 
 // pump forwards raw terminal output. Base64 keeps multi-byte UTF-8 sequences
@@ -148,25 +156,20 @@ func (a *App) session(id string) *sshSession {
 
 func authMethods(host Host, sec hostSecrets) ([]ssh.AuthMethod, error) {
 	if host.AuthType == "key" {
+		if sec.Signer != nil {
+			return []ssh.AuthMethod{ssh.PublicKeys(sec.Signer)}, nil
+		}
 		data, err := os.ReadFile(expandHome(host.KeyPath))
 		if err != nil {
 			return nil, fmt.Errorf("gagal membaca SSH key: %w", err)
 		}
-		var signer ssh.Signer
-		if sec.Passphrase != "" {
-			signer, err = ssh.ParsePrivateKeyWithPassphrase(data, []byte(sec.Passphrase))
-		} else {
-			signer, err = ssh.ParsePrivateKey(data)
-		}
-		var missing *ssh.PassphraseMissingError
-		if errors.As(err, &missing) {
-			return nil, errors.New("SSH key ini butuh passphrase; isi di pengaturan host")
-		}
-		if errors.Is(err, x509.IncorrectPasswordError) {
-			return nil, errors.New("passphrase SSH key salah")
-		}
+		priv, err := parsePrivateKey(data, sec.Passphrase)
 		if err != nil {
-			return nil, fmt.Errorf("SSH key tidak valid: %w", err)
+			return nil, err
+		}
+		signer, err := ssh.NewSignerFromKey(priv)
+		if err != nil {
+			return nil, err
 		}
 		return []ssh.AuthMethod{ssh.PublicKeys(signer)}, nil
 	}

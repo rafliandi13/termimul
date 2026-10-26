@@ -1,17 +1,23 @@
 <script lang="ts">
   import { untrack } from 'svelte'
   import type { main } from '../../wailsjs/go/models'
-  import { SaveHost, PickKeyFile } from '../../wailsjs/go/main/App'
+  import { SaveHost } from '../../wailsjs/go/main/App'
+  import KeyDialog from './KeyDialog.svelte'
+  import { backdropClose } from './modal'
 
   let {
     host,
     groups,
+    keys,
     onsaved,
+    onkeyadded,
     oncancel,
   }: {
     host: main.Host | null
     groups: string[]
+    keys: main.Key[]
     onsaved: (h: main.Host) => void
+    onkeyadded: () => void
     oncancel: () => void
   } = $props()
 
@@ -26,6 +32,7 @@
       port: host?.port ?? 22,
       username: host?.username ?? 'root',
       authType: host?.authType ?? 'password',
+      keyId: host?.keyId ?? '',
       keyPath: host?.keyPath ?? '',
       hasPassword: host?.hasPassword ?? false,
       hasPassphrase: host?.hasPassphrase ?? false,
@@ -35,11 +42,7 @@
   )
   let error = $state('')
   let saving = $state(false)
-
-  async function browse() {
-    const path = await PickKeyFile()
-    if (path) form.keyPath = path
-  }
+  let keyDialog = $state<'generate' | 'import' | null>(null)
 
   async function submit(e: SubmitEvent) {
     e.preventDefault()
@@ -54,23 +57,29 @@
     }
   }
 
+  function keyAdded(k: main.Key) {
+    keyDialog = null
+    form.keyId = k.id
+    onkeyadded()
+  }
+
   function onkeydown(e: KeyboardEvent) {
-    if (e.key === 'Escape') oncancel()
+    if (e.key === 'Escape' && !keyDialog) oncancel()
   }
 </script>
 
 <svelte:window {onkeydown} />
 
-<div class="backdrop" role="presentation" onclick={(e) => e.target === e.currentTarget && oncancel()}>
-  <form class="dialog" onsubmit={submit}>
+<div class="modal-backdrop" role="presentation" {...backdropClose(oncancel)}>
+  <form class="modal" onsubmit={submit}>
     <h2>{host ? 'Edit host' : 'Host baru'}</h2>
 
-    <label>
+    <label class="field">
       <span>Nama</span>
       <input bind:value={form.label} placeholder="Web server produksi" />
     </label>
 
-    <label>
+    <label class="field">
       <span>Grup</span>
       <input bind:value={form.group} list="groups" placeholder="Production" />
       <datalist id="groups">
@@ -79,17 +88,17 @@
     </label>
 
     <div class="row">
-      <label class="grow">
+      <label class="field grow">
         <span>Alamat</span>
         <input bind:value={form.address} placeholder="192.168.1.10 atau server.domain.com" required />
       </label>
-      <label class="port">
+      <label class="field port">
         <span>Port</span>
         <input type="number" min="1" max="65535" bind:value={form.port} />
       </label>
     </div>
 
-    <label>
+    <label class="field">
       <span>Username</span>
       <input bind:value={form.username} required />
     </label>
@@ -114,7 +123,7 @@
     </div>
 
     {#if form.authType === 'password'}
-      <label>
+      <label class="field">
         <span>Password</span>
         <input
           type="password"
@@ -123,24 +132,26 @@
         />
       </label>
     {:else}
-      <label>
-        <span>File private key</span>
+      <div class="field">
+        <span>SSH key dari Keychain</span>
         <div class="row">
-          <input class="grow" bind:value={form.keyPath} placeholder="C:\Users\...\.ssh\id_ed25519" />
-          <button type="button" onclick={browse}>Pilih…</button>
+          <select class="grow" bind:value={form.keyId}>
+            <option value="">{keys.length ? 'Pilih key…' : 'Keychain masih kosong'}</option>
+            {#each keys as k (k.id)}<option value={k.id}>{k.label} ({k.type})</option>{/each}
+          </select>
+          <button type="button" onclick={() => (keyDialog = 'import')}>Import…</button>
+          <button type="button" onclick={() => (keyDialog = 'generate')}>Buat…</button>
         </div>
-      </label>
-      <label>
-        <span>Passphrase (jika ada)</span>
-        <input
-          type="password"
-          bind:value={form.passphrase}
-          placeholder={host?.hasPassphrase ? 'Tersimpan. Kosongkan untuk tidak mengubah' : ''}
-        />
-      </label>
+      </div>
+      {#if !form.keyId && form.keyPath}
+        <p class="hint">
+          Saat ini memakai file <code>{form.keyPath}</code> yang tidak bisa dipindah ke keychain otomatis. Pilih atau
+          import key untuk menggantinya.
+        </p>
+      {/if}
     {/if}
 
-    {#if error}<p class="error">{error}</p>{/if}
+    {#if error}<p class="error-text">{error}</p>{/if}
 
     <div class="actions">
       <button type="button" class="ghost" onclick={oncancel}>Batal</button>
@@ -149,76 +160,23 @@
   </form>
 </div>
 
+{#if keyDialog}
+  <KeyDialog mode={keyDialog} onsaved={keyAdded} oncancel={() => (keyDialog = null)} />
+{/if}
+
 <style>
-  .backdrop {
-    position: fixed;
-    inset: 0;
-    background: #0009;
-    display: grid;
-    place-items: center;
-    z-index: 10;
-  }
-  .dialog {
-    width: min(460px, calc(100vw - 32px));
-    max-height: calc(100vh - 32px);
-    overflow: auto;
-    background: var(--bg-raised);
-    border: 1px solid var(--border);
-    border-radius: var(--radius);
-    padding: 20px;
-    display: flex;
-    flex-direction: column;
-    gap: 12px;
-  }
-  h2 {
-    margin: 0 0 4px;
-    font-size: 17px;
-  }
-  label {
-    display: flex;
-    flex-direction: column;
-    gap: 4px;
-  }
-  label > span {
-    font-size: 12px;
-    color: var(--text-muted);
-  }
   .row {
     display: flex;
     gap: 8px;
   }
   .grow {
     flex: 1;
+    min-width: 0;
   }
   .port {
     width: 90px;
   }
-  .segmented {
-    display: flex;
-    background: var(--bg-input);
-    border: 1px solid var(--border);
-    border-radius: 6px;
-    padding: 2px;
-  }
-  .segmented button {
-    flex: 1;
-    border: none;
-    background: transparent;
-    padding: 5px;
-  }
-  .segmented button.on {
-    background: var(--bg-hover);
-    color: var(--accent);
-  }
-  .error {
-    margin: 0;
-    color: var(--danger);
-    font-size: 13px;
-  }
-  .actions {
-    display: flex;
-    justify-content: flex-end;
-    gap: 8px;
-    margin-top: 4px;
+  code {
+    word-break: break-all;
   }
 </style>

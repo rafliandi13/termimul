@@ -11,6 +11,7 @@
   --accent-soft: #00e5fc1f;
   --accent-text: #00282d;
   --term-bg: #161616;
+  --font-mono: "Cascadia Mono", Consolas, Menlo, "SF Mono", "DejaVu Sans Mono", "Ubuntu Mono", monospace;
   --danger: #f06a6a;
   --radius: 8px;
   color-scheme: dark;
@@ -30,7 +31,7 @@ body,
 body {
   background: var(--bg);
   color: var(--text);
-  font: 14px/1.45 "Segoe UI", system-ui, -apple-system, sans-serif;
+  font: 14px/1.45 "Segoe UI", -apple-system, BlinkMacSystemFont, system-ui, Ubuntu, Cantarell, sans-serif;
   overflow: hidden;
   user-select: none;
 }
@@ -93,4 +94,237 @@ button.ghost {
 
 button.ghost:hover {
   background: var(--bg-hover);
+}
+
+button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+textarea {
+  width: 100%;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 8px 10px;
+  font: 12px/1.4 var(--font-mono);
+  color: inherit;
+  resize: vertical;
+  user-select: text;
+}
+
+textarea:focus {
+  outline: none;
+  border-color: var(--accent);
+}
+
+/* Shared dialog + form layout */
+.modal-backdrop {
+  position: fixed;
+  inset: 0;
+  background: #000a;
+  display: grid;
+  place-items: center;
+  z-index: 10;
+}
+
+.modal {
+  width: min(460px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
+  overflow: auto;
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.modal h2 {
+  margin: 0 0 4px;
+  font-size: 17px;
+}
+
+.field {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.field > span {
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.hint {
+  margin: 0;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.error-text {
+  margin: 0;
+  color: var(--danger);
+  font-size: 13px;
+}
+
+.actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+  margin-top: 4px;
+}
+
+.segmented {
+  display: flex;
+  background: var(--bg-input);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 2px;
+}
+
+.segmented button {
+  flex: 1;
+  border: none;
+  background: transparent;
+  padding: 5px;
+}
+
+.segmented button.on {
+  background: var(--bg-hover);
+  color: var(--accent);
+}
+
+/* Shared page chrome for the Hosts / Keychain / Known Hosts screens */
+.page {
+  flex: 1;
+  padding: 16px 20px;
+  overflow-y: auto;
+}
+
+.toolbar {
+  display: flex;
+  gap: 10px;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.toolbar input[type="search"] {
+  max-width: 360px;
+}
+
+.toolbar .spacer {
+  flex: 1;
+}
+
+.page h3 {
+  margin: 18px 0 8px;
+  font-size: 12px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  color: var(--text-muted);
+}
+
+.grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+}
+
+.card {
+  background: var(--bg-raised);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  overflow: hidden;
+}
+
+.card:hover {
+  border-color: #00e5fc66;
+}
+
+.card-body {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  padding: 12px;
+  text-align: left;
+}
+
+.tile {
+  width: 34px;
+  height: 34px;
+  border-radius: 8px;
+  display: grid;
+  place-items: center;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
+.meta {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.meta strong,
+.meta small {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+.meta small {
+  color: var(--text-muted);
+}
+
+.mono {
+  font-family: var(--font-mono);
+  font-size: 11px;
+}
+
+.card-actions {
+  display: flex;
+  justify-content: flex-end;
+  border-top: 1px solid var(--border);
+  padding: 2px 4px;
+}
+
+.card-actions button {
+  border-color: transparent;
+  background: transparent;
+  padding: 3px 10px;
+  font-size: 12px;
+  color: var(--text-muted);
+}
+
+.card-actions button:hover {
+  background: var(--bg-hover);
+  color: var(--text);
+}
+
+.card-actions .danger:hover {
+  color: var(--danger);
+}
+
+.empty {
+  padding: 60px 0;
+  text-align: center;
+  color: var(--text-muted);
+}
+
+.notice {
+  margin: 0 0 8px;
+  padding: 8px 12px;
+  border-radius: 6px;
+  background: var(--accent-soft);
+  color: var(--accent);
+  font-size: 13px;
 }

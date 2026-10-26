@@ -1,0 +1,24 @@
+# Debian package definition. Run from the repo root after `wails build`:
+#   VERSION=0.2.0 nfpm package --config build/linux/nfpm.yaml --packager deb --target build/bin/
+name: termimus
+arch: amd64
+platform: linux
+version: ${VERSION}
+section: net
+priority: optional
+maintainer: rafliandi13 <herp1306@gmail.com>
+description: Lightweight open-source SSH client with host manager, keychain and SFTP.
+homepage: https://github.com/rafliandi13/termimus
+license: MIT
+depends:
+  - libgtk-3-0
+  - libwebkit2gtk-4.1-0
+recommends:
+  - gnome-keyring
+contents:
+  - src: build/bin/termimus
+    dst: /usr/bin/termimus
+  - src: build/linux/termimus.desktop
+    dst: /usr/share/applications/termimus.desktop
+  - src: build/linux/termimus.png
+    dst: /usr/share/icons/hicolor/256x256/apps/termimus.png
