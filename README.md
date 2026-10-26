@@ -38,7 +38,8 @@ Download from the [Releases](../../releases) page:
 | Ubuntu 24.04+, Debian 13+ | `termimus-linux-amd64.deb` |
 | Other Linux (x86-64) | `termimus-linux-amd64.tar.gz` (needs GTK 3 and WebKitGTK 4.1) |
 
-The builds are not code-signed yet, so the first launch needs one extra step:
+The builds are not code-signed yet (Windows signing through SignPath Foundation is
+being set up, see [Code signing policy](CODE_SIGNING.md)), so the first launch needs one extra step:
 
 - **Windows**: SmartScreen may warn. Choose **More info → Run anyway**.
 - **macOS**: drag Termimus to Applications, then run this once in Terminal (macOS otherwise reports that the app "is damaged"):
@@ -136,6 +137,14 @@ frontend calls e.g. `HostService.List()` with full TypeScript types. Packages un
 
 Issues and pull requests are welcome. Before opening a PR, please run
 `go test ./...` and `npm run check` in `frontend/`.
+
+## Code signing and privacy
+
+Windows releases are signed through SignPath Foundation once the project is approved:
+free code signing provided by [SignPath.io](https://about.signpath.io), certificate by
+[SignPath Foundation](https://signpath.org). See the [code signing policy](CODE_SIGNING.md)
+for what is signed, who approves it, and the privacy policy: Termimus connects only to
+the servers you add and sends no telemetry.
 
 ## License
 
