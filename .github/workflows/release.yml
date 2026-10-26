@@ -34,8 +34,6 @@ jobs:
   windows:
     needs: test
     runs-on: windows-latest
-    env:
-      SIGNPATH_API_TOKEN: ${{ secrets.SIGNPATH_API_TOKEN }}
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-go@v5
@@ -52,62 +50,6 @@ jobs:
           choco install nsis -y --no-progress
           echo "C:\Program Files (x86)\NSIS" >> $env:GITHUB_PATH
       - run: wails build -nsis -trimpath -ldflags "-s -w"
-
-      # Code signing via SignPath Foundation (see CODE_SIGNING.md). Runs only for
-      # release tags once the SIGNPATH_API_TOKEN secret exists; otherwise the
-      # unsigned build above is published as before.
-      - name: Decide whether to sign
-        id: sign
-        shell: bash
-        run: |
-          if [[ "$GITHUB_REF" == refs/tags/v* && -n "$SIGNPATH_API_TOKEN" ]]; then
-            echo "enabled=true" >> "$GITHUB_OUTPUT"
-          else
-            echo "Skipping code signing (not a release tag, or SIGNPATH_API_TOKEN not set)"
-          fi
-
-      # 1. Sign the app itself, replacing build/bin/termimus.exe.
-      - id: upload-exe
-        if: steps.sign.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-exe
-          path: build/bin/termimus.exe
-      - if: steps.sign.outputs.enabled == 'true'
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'termimus' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          github-artifact-id: ${{ steps.upload-exe.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600 # release signing waits for manual approval
-          output-artifact-directory: build/bin
-
-      # 2. Rebuild the installer around the signed exe (same command Wails runs), then sign it.
-      - name: Rebuild installer with signed exe
-        if: steps.sign.outputs.enabled == 'true'
-        working-directory: build/windows/installer
-        run: makensis "-DARG_WAILS_AMD64_BINARY=${{ github.workspace }}\build\bin\termimus.exe" project.nsi
-      - id: upload-installer
-        if: steps.sign.outputs.enabled == 'true'
-        uses: actions/upload-artifact@v4
-        with:
-          name: unsigned-installer
-          path: build/bin/termimus-amd64-installer.exe
-      - if: steps.sign.outputs.enabled == 'true'
-        uses: signpath/github-action-submit-signing-request@v1
-        with:
-          api-token: ${{ secrets.SIGNPATH_API_TOKEN }}
-          organization-id: ${{ vars.SIGNPATH_ORGANIZATION_ID }}
-          project-slug: ${{ vars.SIGNPATH_PROJECT_SLUG || 'termimus' }}
-          signing-policy-slug: ${{ vars.SIGNPATH_POLICY_SLUG || 'release-signing' }}
-          github-artifact-id: ${{ steps.upload-installer.outputs.artifact-id }}
-          wait-for-completion: true
-          wait-for-completion-timeout-in-seconds: 3600
-          output-artifact-directory: build/bin
-
       - name: Name artifacts
         run: |
           Move-Item build/bin/termimus-amd64-installer.exe dist-termimus-windows-amd64-installer.exe
