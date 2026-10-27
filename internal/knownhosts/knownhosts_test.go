@@ -9,7 +9,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/sshtest"
+	"termimul/internal/sshtest"
 )
 
 func line(host string, k ssh.PublicKey) string {

@@ -7,8 +7,8 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"termimus/internal/knownhosts"
-	"termimus/internal/vault"
+	"termimul/internal/knownhosts"
+	"termimul/internal/vault"
 )
 
 type HostService struct{ *env }

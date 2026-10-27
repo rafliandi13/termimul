@@ -7,12 +7,12 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"termimus/internal/backup"
-	"termimus/internal/vault"
+	"termimul/internal/backup"
+	"termimul/internal/vault"
 )
 
 // BackupService exports and imports hosts, keychain and known hosts as a
-// password-protected .termimus file.
+// password-protected .termimul file.
 type BackupService struct{ *env }
 
 type ImportResult struct {
@@ -20,7 +20,8 @@ type ImportResult struct {
 	KnownHostsAdded int `json:"knownHostsAdded"`
 }
 
-var backupFilter = []runtime.FileFilter{{DisplayName: "Termimus backup (*.termimus)", Pattern: "*.termimus"}}
+// *.termimus is accepted for files exported before the rename to Termimul.
+var backupFilter = []runtime.FileFilter{{DisplayName: "Termimul backup (*.termimul)", Pattern: "*.termimul;*.termimus"}}
 
 // Export asks where to save and writes the encrypted file. Returns the saved
 // path, or "" if the user cancelled.
@@ -29,8 +30,8 @@ func (s *BackupService) Export(password string) (string, error) {
 		return "", fmt.Errorf("password export minimal %d karakter", backup.MinPasswordLength)
 	}
 	path, err := runtime.SaveFileDialog(s.ctx, runtime.SaveDialogOptions{
-		Title:           "Simpan backup Termimus",
-		DefaultFilename: "termimus-" + time.Now().Format("2006-01-02") + ".termimus",
+		Title:           "Simpan backup Termimul",
+		DefaultFilename: "termimul-" + time.Now().Format("2006-01-02") + ".termimul",
 		Filters:         backupFilter,
 	})
 	if err != nil || path == "" {
@@ -54,7 +55,7 @@ func (s *BackupService) Export(password string) (string, error) {
 // PickFile asks for a backup file to import.
 func (s *BackupService) PickFile() (string, error) {
 	return runtime.OpenFileDialog(s.ctx, runtime.OpenDialogOptions{
-		Title:   "Pilih file backup Termimus",
+		Title:   "Pilih file backup Termimul",
 		Filters: backupFilter,
 	})
 }

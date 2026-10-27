@@ -18,8 +18,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/fsutil"
-	"termimus/internal/secret"
+	"termimul/internal/fsutil"
+	"termimul/internal/secret"
 )
 
 // Host is what the frontend sees. Secrets never leave the backend; only

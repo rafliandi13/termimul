@@ -1,13 +1,13 @@
 <p align="center">
-  <img src="build/appicon.png" width="128" alt="Termimus logo">
+  <img src="build/appicon.png" width="128" alt="Termimul logo">
 </p>
 
-<h1 align="center">Termimus</h1>
+<h1 align="center">Termimul</h1>
 
 <p align="center">A lightweight, open-source SSH client for managing many servers.<br>
 Windows · macOS · Linux</p>
 
-Termimus keeps your servers in one place, organised by group, and opens each
+Termimul keeps your servers in one place, organised by group, and opens each
 one in its own terminal or file-browser tab with a single click. It is a small
 native app built with Go and [Wails](https://wails.io) that uses the operating
 system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a browser.
@@ -15,9 +15,9 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 ## Features
 
 - **Host manager**: add, edit, and delete hosts; organise them into groups; search by name, address, or user.
-- **Keychain**: generate ED25519 / RSA 4096 / ECDSA keys or import existing ones (including passphrase-protected keys), and copy the public key in one click. Keys are stored encrypted inside Termimus, so hosts don't depend on a key file path.
+- **Keychain**: generate ED25519 / RSA 4096 / ECDSA keys or import existing ones (including passphrase-protected keys), and copy the public key in one click. Keys are stored encrypted inside Termimul, so hosts don't depend on a key file path.
 - **SFTP file browser**: browse, upload, download (files and whole folders), rename, delete, create folders, and drag files in from your file manager, with progress reporting.
-- **Export / import**: move all hosts, passwords, keychain keys and known hosts to another device (any OS) as one `.termimus` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
+- **Export / import**: move all hosts, passwords, keychain keys and known hosts to another device (any OS) as one `.termimul` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
 - **Known hosts**: you confirm a server's fingerprint the first time you connect; changed keys are refused. View, delete, or import entries from `~/.ssh/known_hosts`.
 - **Encrypted credentials**: passwords and keys are encrypted with the OS credential store (see below) and never sent to the UI.
 - **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the tab; a dropped connection keeps it open with a **Reconnect** button.
@@ -33,27 +33,27 @@ Download from the [Releases](../../releases) page:
 
 | OS | File |
 | --- | --- |
-| Windows 10/11 (64-bit) | `termimus-windows-amd64-installer.exe`, or the portable `termimus-windows-amd64-portable.exe` |
-| macOS 11+ (Intel & Apple Silicon) | `termimus-macos-universal.dmg` |
-| Ubuntu 24.04+, Debian 13+ | `termimus-linux-amd64.deb` |
-| Other Linux (x86-64) | `termimus-linux-amd64.tar.gz` (needs GTK 3 and WebKitGTK 4.1) |
+| Windows 10/11 (64-bit) | `termimul-windows-amd64-installer.exe`, or the portable `termimul-windows-amd64-portable.exe` |
+| macOS 11+ (Intel & Apple Silicon) | `termimul-macos-universal.dmg` |
+| Ubuntu 24.04+, Debian 13+ | `termimul-linux-amd64.deb` |
+| Other Linux (x86-64) | `termimul-linux-amd64.tar.gz` (needs GTK 3 and WebKitGTK 4.1) |
 
 The builds are not code-signed yet, so the first launch needs one extra step:
 
 - **Windows**: SmartScreen may warn. Choose **More info → Run anyway**.
-- **macOS**: drag Termimus to Applications, then run this once in Terminal (macOS otherwise reports that the app "is damaged"):
+- **macOS**: drag Termimul to Applications, then run this once in Terminal (macOS otherwise reports that the app "is damaged"):
   ```sh
-  xattr -cr /Applications/Termimus.app
+  xattr -cr /Applications/Termimul.app
   ```
-- **Linux (.deb)**: `sudo apt install ./termimus-linux-amd64.deb`
+- **Linux (.deb)**: `sudo apt install ./termimul-linux-amd64.deb`
 
 ## Where your data lives
 
 | OS | Folder |
 | --- | --- |
-| Windows | `%APPDATA%\termimus\` |
-| macOS | `~/Library/Application Support/termimus/` |
-| Linux | `~/.config/termimus/` |
+| Windows | `%APPDATA%\termimul\` |
+| macOS | `~/Library/Application Support/termimul/` |
+| Linux | `~/.config/termimul/` |
 
 The folder holds `hosts.json` (hosts and keychain, with secrets encrypted) and
 `known_hosts`. Uninstalling does not delete it, so your data survives a reinstall.
@@ -101,7 +101,7 @@ internal/
     backup.go            BackupService (export / import)
     sessions.go          TerminalService, SFTPService (push output/progress as events)
   vault/                 hosts.json: hosts + keychain, format migration, snapshot/merge
-  backup/                password-protected .termimus export files
+  backup/                password-protected .termimul export files
   secret/                encryption at rest: DPAPI (Windows), Keychain / Secret Service + AES-GCM
   sshx/                  dialing, authentication, keep-alive
   knownhosts/            trust-on-first-use verification and known_hosts management

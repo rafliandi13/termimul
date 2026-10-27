@@ -4,7 +4,7 @@ import (
 	"errors"
 	"strings"
 
-	"termimus/internal/secret"
+	"termimul/internal/secret"
 )
 
 // PortableHost and PortableKey carry secrets in plain text. They only exist in

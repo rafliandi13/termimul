@@ -13,9 +13,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/fsutil"
-	"termimus/internal/knownhosts"
-	"termimus/internal/vault"
+	"termimul/internal/fsutil"
+	"termimul/internal/knownhosts"
+	"termimul/internal/vault"
 )
 
 type Dialer struct {

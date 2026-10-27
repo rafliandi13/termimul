@@ -1,4 +1,4 @@
-// Package knownhosts manages Termimus' own known_hosts file: trust-on-first-use
+// Package knownhosts manages Termimul' own known_hosts file: trust-on-first-use
 // verification, listing, deleting, and importing entries from OpenSSH.
 package knownhosts
 
@@ -17,7 +17,7 @@ import (
 	"golang.org/x/crypto/ssh"
 	xknownhosts "golang.org/x/crypto/ssh/knownhosts"
 
-	"termimus/internal/fsutil"
+	"termimul/internal/fsutil"
 )
 
 type Entry struct {

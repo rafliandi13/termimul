@@ -52,8 +52,8 @@ jobs:
       - run: wails build -nsis -trimpath -ldflags "-s -w"
       - name: Name artifacts
         run: |
-          Move-Item build/bin/termimus-amd64-installer.exe dist-termimus-windows-amd64-installer.exe
-          Move-Item build/bin/termimus.exe dist-termimus-windows-amd64-portable.exe
+          Move-Item build/bin/termimul-amd64-installer.exe dist-termimul-windows-amd64-installer.exe
+          Move-Item build/bin/termimul.exe dist-termimul-windows-amd64-portable.exe
       - uses: actions/upload-artifact@v4
         with:
           name: windows
@@ -77,9 +77,9 @@ jobs:
       - name: Package .dmg
         run: |
           mkdir -p dmg
-          cp -R build/bin/*.app dmg/Termimus.app
+          cp -R build/bin/*.app dmg/Termimul.app
           ln -s /Applications dmg/Applications
-          hdiutil create -volname Termimus -srcfolder dmg -ov -format UDZO dist-termimus-macos-universal.dmg
+          hdiutil create -volname Termimul -srcfolder dmg -ov -format UDZO dist-termimul-macos-universal.dmg
       - uses: actions/upload-artifact@v4
         with:
           name: macos
@@ -112,10 +112,10 @@ jobs:
         run: |
           if [[ "$GITHUB_REF" == refs/tags/v* ]]; then VERSION="${GITHUB_REF_NAME#v}"; else VERSION="0.0.0~dev${GITHUB_RUN_NUMBER}"; fi
           export VERSION
-          nfpm package --config build/linux/nfpm.yaml --packager deb --target dist-termimus-linux-amd64.deb
-          mkdir -p tar/termimus
-          cp build/bin/termimus build/linux/termimus.desktop build/linux/termimus.png LICENSE tar/termimus/
-          tar -czf dist-termimus-linux-amd64.tar.gz -C tar termimus
+          nfpm package --config build/linux/nfpm.yaml --packager deb --target dist-termimul-linux-amd64.deb
+          mkdir -p tar/termimul
+          cp build/bin/termimul build/linux/termimul.desktop build/linux/termimul.png LICENSE tar/termimul/
+          tar -czf dist-termimul-linux-amd64.tar.gz -C tar termimul
       - uses: actions/upload-artifact@v4
         with:
           name: linux
@@ -133,5 +133,5 @@ jobs:
         run: for f in dist-*; do mv "$f" "${f#dist-}"; done
       - uses: softprops/action-gh-release@v2
         with:
-          files: termimus-*
+          files: termimul-*
           generate_release_notes: true

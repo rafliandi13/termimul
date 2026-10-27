@@ -6,8 +6,8 @@ import (
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
-	"termimus/internal/sftpx"
-	"termimus/internal/terminal"
+	"termimul/internal/sftpx"
+	"termimul/internal/terminal"
 )
 
 // TerminalService runs shell tabs. Output is pushed to the frontend as events:

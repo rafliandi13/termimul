@@ -22,8 +22,10 @@ import (
 // against anyone who can read this user's files.
 
 const (
-	keyringService = "termimus"
+	keyringService = "termimul"
 	keyringUser    = "vault-key"
+	// The app was called Termimus before v0.4.0; its key is copied over on first use.
+	legacyKeyringService = "termimus"
 )
 
 var (
@@ -74,6 +76,17 @@ func getOrCreateVaultKey() ([]byte, error) {
 		return decodeVaultKey(stored)
 	}
 	keyringUsable := errors.Is(err, keyring.ErrNotFound)
+	if keyringUsable {
+		if legacy, err := keyring.Get(legacyKeyringService, keyringUser); err == nil {
+			key, err := decodeVaultKey(legacy)
+			if err != nil {
+				return nil, err
+			}
+			// Best effort: if the copy fails we read the legacy entry again next launch.
+			_ = keyring.Set(keyringService, keyringUser, legacy)
+			return key, nil
+		}
+	}
 
 	key := make([]byte, 32)
 	if _, err := rand.Read(key); err != nil {
@@ -105,5 +118,5 @@ func vaultKeyFile() (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return filepath.Join(dir, "termimus", "vault.key"), nil
+	return filepath.Join(dir, "termimul", "vault.key"), nil
 }

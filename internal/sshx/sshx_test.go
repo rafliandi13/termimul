@@ -5,8 +5,8 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/sshtest"
-	"termimus/internal/vault"
+	"termimul/internal/sshtest"
+	"termimul/internal/vault"
 )
 
 func TestLegacyKeyPathAuth(t *testing.T) {

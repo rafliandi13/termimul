@@ -109,7 +109,7 @@
         <span>Passphrase (jika key terenkripsi)</span>
         <input type="password" bind:value={passphrase} />
       </label>
-      <p class="hint">Key disimpan terenkripsi di Termimus, jadi file aslinya boleh dipindah atau dihapus.</p>
+      <p class="hint">Key disimpan terenkripsi di Termimul, jadi file aslinya boleh dipindah atau dihapus.</p>
     {/if}
 
     {#if error}<p class="error-text">{error}</p>{/if}

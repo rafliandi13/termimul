@@ -1,4 +1,4 @@
-// Package backup reads and writes password-protected export files (.termimus).
+// Package backup reads and writes password-protected export files (.termimul).
 //
 // The bundle is JSON, encrypted with AES-256-GCM under a key derived from the
 // export password with Argon2id. Nothing in the file is readable without the
@@ -14,13 +14,15 @@ import (
 
 	"golang.org/x/crypto/argon2"
 
-	"termimus/internal/secret"
-	"termimus/internal/vault"
+	"termimul/internal/secret"
+	"termimul/internal/vault"
 )
 
 const (
-	format  = "termimus-backup"
+	format  = "termimul-backup"
 	version = 1
+	// Files exported while the app was called Termimus (before v0.4.0).
+	legacyFormat = "termimus-backup"
 
 	// MinPasswordLength guards against trivially guessable export passwords.
 	MinPasswordLength = 8
@@ -79,11 +81,11 @@ func Encode(b Bundle, password string) ([]byte, error) {
 
 func Decode(data []byte, password string) (Bundle, error) {
 	var env envelope
-	if err := json.Unmarshal(data, &env); err != nil || env.Format != format {
-		return Bundle{}, errors.New("bukan file backup Termimus")
+	if err := json.Unmarshal(data, &env); err != nil || (env.Format != format && env.Format != legacyFormat) {
+		return Bundle{}, errors.New("bukan file backup Termimul")
 	}
 	if env.Version > version {
-		return Bundle{}, errors.New("file backup dibuat oleh versi Termimus yang lebih baru; update aplikasi dulu")
+		return Bundle{}, errors.New("file backup dibuat oleh versi Termimul yang lebih baru; update aplikasi dulu")
 	}
 	k := env.KDF
 	if k.Name != "argon2id" || len(k.Salt) < 16 || k.Time == 0 || k.Time > maxArgonTime ||

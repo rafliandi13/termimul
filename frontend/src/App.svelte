@@ -104,7 +104,7 @@
         <path d="M1068 890 1168 995 1068 1100" />
         <rect x="1208" y="1070" width="170" height="57" rx="10" />
       </svg>
-      Termimus
+      Termimul
     </button>
     {#each tabs as t (t.id)}
       <div class="tab" class:active={activeTab === t.id}>

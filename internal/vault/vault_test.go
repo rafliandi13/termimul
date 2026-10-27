@@ -10,7 +10,7 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/sshtest"
+	"termimul/internal/sshtest"
 )
 
 func TestImportEncryptedKeyAndDuplicates(t *testing.T) {

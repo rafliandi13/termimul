@@ -26,7 +26,7 @@
 
   // Addresses are hidden by default so they don't leak during screen sharing.
   // The choice is a per-device convenience, so localStorage is enough.
-  const REVEAL_KEY = 'termimus.revealAddresses'
+  const REVEAL_KEY = 'termimul.revealAddresses'
   let reveal = $state(readReveal())
 
   function readReveal() {

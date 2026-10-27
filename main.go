@@ -14,7 +14,7 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/options/mac"
 	"github.com/wailsapp/wails/v2/pkg/options/windows"
 
-	"termimus/internal/services"
+	"termimul/internal/services"
 )
 
 //go:embed all:frontend/dist
@@ -28,13 +28,15 @@ func main() {
 	if err != nil {
 		log.Fatal(err)
 	}
-	svc, err := services.New(filepath.Join(configDir, "termimus"))
+	dataDir := filepath.Join(configDir, "termimul")
+	migrateDataDir(filepath.Join(configDir, "termimus"), dataDir)
+	svc, err := services.New(dataDir)
 	if err != nil {
 		log.Fatal(err)
 	}
 
 	err = wails.Run(&options.App{
-		Title:     "Termimus",
+		Title:     "Termimul",
 		Width:     1200,
 		Height:    760,
 		MinWidth:  760,
@@ -51,12 +53,12 @@ func main() {
 		Mac: &mac.Options{
 			Appearance: mac.NSAppearanceNameDarkAqua,
 			About: &mac.AboutInfo{
-				Title:   "Termimus",
+				Title:   "Termimul",
 				Message: "Lightweight open-source SSH client\nMIT License",
 			},
 		},
 		Linux: &linux.Options{
-			ProgramName: "termimus", // matches StartupWMClass in the .desktop file
+			ProgramName: "termimul", // matches StartupWMClass in the .desktop file
 		},
 		// Lets files be dragged from the file manager into an SFTP tab.
 		DragAndDrop: &options.DragAndDrop{
@@ -69,5 +71,20 @@ func main() {
 	})
 	if err != nil {
 		log.Fatal(err)
+	}
+}
+
+// migrateDataDir moves data from the app's former name (Termimus, before
+// v0.4.0) so existing hosts, keys and known hosts carry over. It only acts
+// when the new folder doesn't exist yet, so it never overwrites anything.
+func migrateDataDir(oldDir, newDir string) {
+	if _, err := os.Stat(newDir); !os.IsNotExist(err) {
+		return
+	}
+	if _, err := os.Stat(oldDir); err != nil {
+		return
+	}
+	if err := os.Rename(oldDir, newDir); err != nil {
+		log.Printf("could not move %s to %s: %v", oldDir, newDir, err)
 	}
 }

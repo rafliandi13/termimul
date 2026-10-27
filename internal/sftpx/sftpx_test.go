@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"testing"
 
-	"termimus/internal/sshtest"
+	"termimul/internal/sshtest"
 )
 
 func TestRoundTrip(t *testing.T) {

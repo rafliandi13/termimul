@@ -9,9 +9,9 @@ import (
 
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/knownhosts"
-	"termimus/internal/sshtest"
-	"termimus/internal/vault"
+	"termimul/internal/knownhosts"
+	"termimul/internal/sshtest"
+	"termimul/internal/vault"
 )
 
 const pass = "export-pass-123"
@@ -112,6 +112,14 @@ func TestDecodeRejects(t *testing.T) {
 	greedy, _ := json.Marshal(env)
 	if _, err := Decode(greedy, pass); err == nil || !strings.Contains(err.Error(), "tidak valid") {
 		t.Fatalf("oversized KDF parameters: %v", err)
+	}
+
+	// Files exported before the rename (format "termimus-backup") still import.
+	json.Unmarshal(file, &env)
+	env.Format = legacyFormat
+	legacy, _ := json.Marshal(env)
+	if _, err := Decode(legacy, pass); err != nil {
+		t.Fatalf("legacy Termimus backup rejected: %v", err)
 	}
 
 	if _, err := Decode([]byte(`{"hosts":[]}`), pass); err == nil {

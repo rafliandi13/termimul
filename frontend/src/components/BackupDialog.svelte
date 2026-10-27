@@ -87,7 +87,7 @@
     {#if mode === 'export'}
       {#if done}
         <p class="notice" role="status">Backup tersimpan di <code>{done}</code></p>
-        <p class="hint">Pindahkan file ini ke perangkat lain, lalu buka Termimus di sana dan pilih Import.</p>
+        <p class="hint">Pindahkan file ini ke perangkat lain, lalu buka Termimul di sana dan pilih Import.</p>
       {:else}
         <p class="hint">
           Semua host, password, SSH key di Keychain, dan Known Hosts disimpan dalam satu file yang dikunci dengan password
@@ -114,7 +114,7 @@
       </ul>
     {:else}
       <div class="field">
-        <span>File backup (.termimus)</span>
+        <span>File backup (.termimul)</span>
         <div class="row">
           <input class="grow" value={fileName} readonly placeholder="Belum dipilih" title={filePath} />
           <button type="button" onclick={browse}>Pilih…</button>

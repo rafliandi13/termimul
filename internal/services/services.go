@@ -12,11 +12,11 @@ import (
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/crypto/ssh"
 
-	"termimus/internal/knownhosts"
-	"termimus/internal/sftpx"
-	"termimus/internal/sshx"
-	"termimus/internal/terminal"
-	"termimus/internal/vault"
+	"termimul/internal/knownhosts"
+	"termimul/internal/sftpx"
+	"termimul/internal/sshx"
+	"termimul/internal/terminal"
+	"termimul/internal/vault"
 )
 
 // env is shared by all services. ctx is set once the window has started.
