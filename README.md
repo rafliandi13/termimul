@@ -16,7 +16,8 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 
 - **Host manager**: add, edit, and delete hosts; organise them into groups; search by name, address, or user.
 - **Keychain**: generate ED25519 / RSA 4096 / ECDSA keys or import existing ones (including passphrase-protected keys), and copy the public key in one click. Keys are stored encrypted inside Termimul, so hosts don't depend on a key file path.
-- **SFTP file browser**: browse, upload, download (files and whole folders), rename, delete, create folders, and drag files in from your file manager, with progress reporting.
+- **Dual-pane SFTP**: each pane shows this computer or any saved server. Copy files and folders between panes with the arrow buttons or by dragging, **including directly from one server to another** (streamed through the app, nothing is stored on your disk). Upload by dragging files in from your file manager; rename, delete, create folders, multi-select with Ctrl/Shift.
+- **Port forwarding**: saved local (`-L`), remote (`-R`) and dynamic SOCKS5 (`-D`) tunnels with one-click start/stop, live status and connection count, and optional auto-start when the app opens. Tunnels listen on 127.0.0.1 unless you choose otherwise.
 - **Export / import**: move all hosts, passwords, keychain keys and known hosts to another device (any OS) as one `.termimul` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
 - **Known hosts**: you confirm a server's fingerprint the first time you connect; changed keys are refused. View, delete, or import entries from `~/.ssh/known_hosts`.
 - **Encrypted credentials**: passwords and keys are encrypted with the OS credential store (see below) and never sent to the UI.
@@ -100,13 +101,15 @@ internal/
     data.go              HostService, KeychainService, KnownHostService
     backup.go            BackupService (export / import)
     sessions.go          TerminalService, SFTPService (push output/progress as events)
+    tunnels.go           TunnelService (port forwarding)
   vault/                 hosts.json: hosts + keychain, format migration, snapshot/merge
   backup/                password-protected .termimul export files
   secret/                encryption at rest: DPAPI (Windows), Keychain / Secret Service + AES-GCM
   sshx/                  dialing, authentication, keep-alive
   knownhosts/            trust-on-first-use verification and known_hosts management
   terminal/              interactive PTY sessions
-  sftpx/                 SFTP listing, file operations, recursive transfers
+  sftpx/                 dual-pane browsing: local and SFTP filesystems, copies between any two
+  tunnel/                local, remote and SOCKS5 port forwarding
   sshtest/               throwaway SSH/SFTP servers for tests
   fsutil/                atomic writes, ~ expansion
 frontend/src/
@@ -126,10 +129,11 @@ frontend calls e.g. `HostService.List()` with full TypeScript types. Packages un
 - [x] SFTP file browser
 - [x] Keychain and known hosts
 - [x] macOS and Linux builds
+- [x] Port forwarding
+- [x] Dual-pane SFTP with server-to-server copy
 - [ ] Import hosts from `~/.ssh/config`
 - [ ] Sync hosts between devices (encrypted, via a folder such as OneDrive / Dropbox)
 - [ ] Snippets that run one command on several servers
-- [ ] Port forwarding
 - [ ] Split panes
 
 ## Contributing

@@ -6,8 +6,12 @@ export function Close(arg1) {
   return window['go']['services']['SFTPService']['Close'](arg1);
 }
 
-export function Download(arg1, arg2) {
-  return window['go']['services']['SFTPService']['Download'](arg1, arg2);
+export function Copy(arg1, arg2, arg3, arg4, arg5) {
+  return window['go']['services']['SFTPService']['Copy'](arg1, arg2, arg3, arg4, arg5);
+}
+
+export function Download(arg1, arg2, arg3) {
+  return window['go']['services']['SFTPService']['Download'](arg1, arg2, arg3);
 }
 
 export function List(arg1, arg2) {
@@ -30,10 +34,10 @@ export function Rename(arg1, arg2, arg3) {
   return window['go']['services']['SFTPService']['Rename'](arg1, arg2, arg3);
 }
 
-export function UploadDialog(arg1, arg2) {
-  return window['go']['services']['SFTPService']['UploadDialog'](arg1, arg2);
+export function UploadDialog(arg1, arg2, arg3) {
+  return window['go']['services']['SFTPService']['UploadDialog'](arg1, arg2, arg3);
 }
 
-export function UploadPaths(arg1, arg2, arg3) {
-  return window['go']['services']['SFTPService']['UploadPaths'](arg1, arg2, arg3);
+export function UploadPaths(arg1, arg2, arg3, arg4) {
+  return window['go']['services']['SFTPService']['UploadPaths'](arg1, arg2, arg3, arg4);
 }

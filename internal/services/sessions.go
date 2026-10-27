@@ -48,59 +48,75 @@ func (s *TerminalService) Disconnect(sessionID string) {
 	s.sessions.Close(sessionID)
 }
 
-// SFTPService runs file-browser tabs. Transfer progress is pushed as
-// "sftp:progress:<id>" events carrying an sftpx.Progress.
+// LocalSource is the source name for "this computer" in a file-browser pane.
+const LocalSource = "local"
+
+// SFTPService runs the dual-pane file browser. Each pane has its own ID and
+// shows either this computer (source "local") or a saved host. Transfer
+// progress is pushed as "sftp:progress:<progressID>" events carrying an
+// sftpx.Progress; the frontend uses the tab ID so both panes share one bar.
 type SFTPService struct {
 	*env
 	sessions *sftpx.Manager
 }
 
-// Open connects and returns the remote home directory.
-func (s *SFTPService) Open(sessionID, hostID string) (string, error) {
-	client, err := s.dialer.Dial(s.ctx, hostID)
+// Open shows source (LocalSource or a host ID) in pane paneID and returns the
+// starting directory.
+func (s *SFTPService) Open(paneID, source string) (string, error) {
+	if source == LocalSource {
+		return s.sessions.OpenLocal(paneID), nil
+	}
+	client, err := s.dialer.Dial(s.ctx, source)
 	if err != nil {
 		return "", err
 	}
-	return s.sessions.Open(sessionID, client)
+	return s.sessions.Open(paneID, source, client)
 }
 
-func (s *SFTPService) Close(sessionID string) {
-	s.sessions.Close(sessionID)
+func (s *SFTPService) Close(paneID string) {
+	s.sessions.Close(paneID)
 }
 
-func (s *SFTPService) List(sessionID, dir string) ([]sftpx.FileEntry, error) {
-	return s.sessions.List(sessionID, dir)
+func (s *SFTPService) List(paneID, dir string) (sftpx.Listing, error) {
+	return s.sessions.List(paneID, dir)
 }
 
-func (s *SFTPService) MakeDir(sessionID, dir string) error {
-	return s.sessions.Mkdir(sessionID, dir)
+func (s *SFTPService) MakeDir(paneID, dir string) error {
+	return s.sessions.Mkdir(paneID, dir)
 }
 
-func (s *SFTPService) Rename(sessionID, from, to string) error {
-	return s.sessions.Rename(sessionID, from, to)
+func (s *SFTPService) Rename(paneID, from, to string) error {
+	return s.sessions.Rename(paneID, from, to)
 }
 
-func (s *SFTPService) Remove(sessionID, path string) error {
-	return s.sessions.Remove(sessionID, path)
+func (s *SFTPService) Remove(paneID, path string) error {
+	return s.sessions.Remove(paneID, path)
 }
 
-// UploadDialog asks for local files and uploads them into remoteDir.
-func (s *SFTPService) UploadDialog(sessionID, remoteDir string) (int, error) {
+// Copy copies paths from one pane into dstDir of another, including directly
+// between two servers. Returns the number of files copied.
+func (s *SFTPService) Copy(progressID, srcPane string, paths []string, dstPane, dstDir string) (int, error) {
+	return s.sessions.Copy(srcPane, paths, dstPane, dstDir, s.progress(progressID))
+}
+
+// UploadDialog asks for files on this computer and copies them into dir of the pane.
+func (s *SFTPService) UploadDialog(progressID, paneID, dir string) (int, error) {
 	paths, err := runtime.OpenMultipleFilesDialog(s.ctx, runtime.OpenDialogOptions{Title: "Pilih file untuk di-upload"})
 	if err != nil || len(paths) == 0 {
 		return 0, err
 	}
-	return s.UploadPaths(sessionID, remoteDir, paths)
+	return s.UploadPaths(progressID, paneID, dir, paths)
 }
 
-// UploadPaths uploads local files and folders, e.g. ones dropped from the file manager.
-func (s *SFTPService) UploadPaths(sessionID, remoteDir string, localPaths []string) (int, error) {
-	return s.sessions.Upload(sessionID, remoteDir, localPaths, s.progress(sessionID))
+// UploadPaths copies files and folders from this computer, e.g. ones dropped
+// from the file manager, into dir of the pane.
+func (s *SFTPService) UploadPaths(progressID, paneID, dir string, localPaths []string) (int, error) {
+	return s.sessions.Upload(paneID, dir, localPaths, s.progress(progressID))
 }
 
 // Download asks where to save (a file name, or a parent folder for folders)
 // and returns the saved path, or "" if the user cancelled.
-func (s *SFTPService) Download(sessionID string, entry sftpx.FileEntry) (string, error) {
+func (s *SFTPService) Download(progressID, paneID string, entry sftpx.FileEntry) (string, error) {
 	var target string
 	if entry.IsDir {
 		parent, err := runtime.OpenDirectoryDialog(s.ctx, runtime.OpenDialogOptions{Title: "Simpan folder ke…"})
@@ -115,11 +131,11 @@ func (s *SFTPService) Download(sessionID string, entry sftpx.FileEntry) (string,
 			return "", err
 		}
 	}
-	return target, s.sessions.Download(sessionID, entry, target, s.progress(sessionID))
+	return target, s.sessions.Download(paneID, entry, target, s.progress(progressID))
 }
 
-func (s *SFTPService) progress(sessionID string) sftpx.ProgressFunc {
+func (s *SFTPService) progress(progressID string) sftpx.ProgressFunc {
 	return func(p sftpx.Progress) {
-		runtime.EventsEmit(s.ctx, "sftp:progress:"+sessionID, p)
+		runtime.EventsEmit(s.ctx, "sftp:progress:"+progressID, p)
 	}
 }

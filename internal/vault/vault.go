@@ -63,6 +63,7 @@ type file struct {
 	Version int          `json:"version"`
 	Hosts   []hostRecord `json:"hosts"`
 	Keys    []keyRecord  `json:"keys"`
+	Tunnels []Tunnel     `json:"tunnels"`
 }
 
 type Store struct {
@@ -243,6 +244,14 @@ func (s *Store) DeleteHost(id string) error {
 	for i, r := range s.data.Hosts {
 		if r.ID == id {
 			s.data.Hosts = append(s.data.Hosts[:i], s.data.Hosts[i+1:]...)
+			// Tunnels can't outlive the host they go through.
+			kept := s.data.Tunnels[:0]
+			for _, t := range s.data.Tunnels {
+				if t.HostID != id {
+					kept = append(kept, t)
+				}
+			}
+			s.data.Tunnels = kept
 			return s.flush()
 		}
 	}

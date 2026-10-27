@@ -21,8 +21,9 @@ type PortableKey struct {
 }
 
 type Snapshot struct {
-	Hosts []PortableHost `json:"hosts"`
-	Keys  []PortableKey  `json:"keys"`
+	Hosts   []PortableHost `json:"hosts"`
+	Keys    []PortableKey  `json:"keys"`
+	Tunnels []Tunnel       `json:"tunnels"`
 }
 
 type MergeResult struct {
@@ -30,13 +31,14 @@ type MergeResult struct {
 	HostsSkipped int `json:"hostsSkipped"`
 	KeysAdded    int `json:"keysAdded"`
 	KeysSkipped  int `json:"keysSkipped"`
+	TunnelsAdded int `json:"tunnelsAdded"`
 }
 
 // Snapshot returns every host and key with secrets decrypted, for export.
 func (s *Store) Snapshot() (Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snap := Snapshot{Hosts: []PortableHost{}, Keys: []PortableKey{}}
+	snap := Snapshot{Hosts: []PortableHost{}, Keys: []PortableKey{}, Tunnels: append([]Tunnel{}, s.data.Tunnels...)}
 	for _, k := range s.data.Keys {
 		pemText, err := secret.Open(k.PrivateEnc)
 		if err != nil {
@@ -69,6 +71,7 @@ func (s *Store) Merge(snap Snapshot) (MergeResult, error) {
 	before := s.data
 	before.Hosts = append([]hostRecord(nil), s.data.Hosts...)
 	before.Keys = append([]keyRecord(nil), s.data.Keys...)
+	before.Tunnels = append([]Tunnel(nil), s.data.Tunnels...)
 	res, err := s.mergeLocked(snap)
 	if err == nil {
 		err = s.flush()
@@ -102,13 +105,16 @@ func (s *Store) mergeLocked(snap Snapshot) (MergeResult, error) {
 		}
 	}
 
+	hostIDs := map[string]string{} // id in the backup -> id in this store
 	for _, ph := range snap.Hosts {
-		if s.hasHostLocked(ph.Host) {
+		if existing, ok := s.findHostLocked(ph.Host); ok {
+			hostIDs[ph.ID] = existing
 			res.HostsSkipped++
 			continue
 		}
 		rec := hostRecord{Host: ph.Host}
 		rec.ID = newID()
+		hostIDs[ph.ID] = rec.ID
 		rec.HasPassword, rec.HasPassphrase = false, false
 		if ph.KeyID != "" {
 			rec.KeyID = keyIDs[ph.KeyID] // "" if the backup lost the key; the host form will ask for one
@@ -123,14 +129,34 @@ func (s *Store) mergeLocked(snap Snapshot) (MergeResult, error) {
 		s.data.Hosts = append(s.data.Hosts, rec)
 		res.HostsAdded++
 	}
+
+	for _, t := range snap.Tunnels {
+		hostID, ok := hostIDs[t.HostID]
+		if !ok || s.hasTunnelLocked(hostID, t) {
+			continue
+		}
+		t.ID, t.HostID = newID(), hostID
+		s.data.Tunnels = append(s.data.Tunnels, t)
+		res.TunnelsAdded++
+	}
 	return res, nil
 }
 
-func (s *Store) hasHostLocked(h Host) bool {
-	for _, r := range s.data.Hosts {
-		if strings.EqualFold(r.Address, h.Address) && r.Port == h.Port && r.Username == h.Username && r.Label == h.Label {
+func (s *Store) hasTunnelLocked(hostID string, t Tunnel) bool {
+	for _, e := range s.data.Tunnels {
+		if e.HostID == hostID && e.Type == t.Type && e.BindAddress == t.BindAddress && e.BindPort == t.BindPort {
 			return true
 		}
 	}
 	return false
+}
+
+// findHostLocked returns the ID of a stored host that matches h.
+func (s *Store) findHostLocked(h Host) (string, bool) {
+	for _, r := range s.data.Hosts {
+		if strings.EqualFold(r.Address, h.Address) && r.Port == h.Port && r.Username == h.Username && r.Label == h.Label {
+			return r.ID, true
+		}
+	}
+	return "", false
 }

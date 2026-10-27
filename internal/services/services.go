@@ -16,6 +16,7 @@ import (
 	"termimul/internal/sftpx"
 	"termimul/internal/sshx"
 	"termimul/internal/terminal"
+	"termimul/internal/tunnel"
 	"termimul/internal/vault"
 )
 
@@ -25,6 +26,7 @@ type env struct {
 	store    *vault.Store
 	hostKeys *knownhosts.DB
 	dialer   *sshx.Dialer
+	tunnels  *tunnel.Manager
 }
 
 type Services struct {
@@ -35,6 +37,7 @@ type Services struct {
 	Terminal   *TerminalService
 	SFTP       *SFTPService
 	Backup     *BackupService
+	Tunnels    *TunnelService
 }
 
 // New opens the data folder (hosts.json, known_hosts) and wires the services.
@@ -49,6 +52,7 @@ func New(dataDir string) (*Services, error) {
 		hostKeys: knownhosts.New(filepath.Join(dataDir, "known_hosts")),
 	}
 	e.dialer = &sshx.Dialer{Store: store, HostKeys: e.hostKeys, Confirm: e.confirmHostKey}
+	e.tunnels = tunnel.NewManager(func(st tunnel.Status) { runtime.EventsEmit(e.ctx, "tunnel:status", st) })
 	return &Services{
 		env:        e,
 		Hosts:      &HostService{e},
@@ -57,21 +61,24 @@ func New(dataDir string) (*Services, error) {
 		Terminal:   &TerminalService{env: e, sessions: terminal.NewManager()},
 		SFTP:       &SFTPService{env: e, sessions: sftpx.NewManager()},
 		Backup:     &BackupService{e},
+		Tunnels:    &TunnelService{e},
 	}, nil
 }
 
 // Bind lists the services to expose to the frontend.
 func (s *Services) Bind() []any {
-	return []any{s.Hosts, s.Keychain, s.KnownHosts, s.Terminal, s.SFTP, s.Backup}
+	return []any{s.Hosts, s.Keychain, s.KnownHosts, s.Terminal, s.SFTP, s.Backup, s.Tunnels}
 }
 
 func (s *Services) Startup(ctx context.Context) {
 	s.env.ctx = ctx
+	s.Tunnels.startAutomatic()
 }
 
 func (s *Services) Shutdown(context.Context) {
 	s.Terminal.sessions.CloseAll()
 	s.SFTP.sessions.CloseAll()
+	s.env.tunnels.StopAll()
 }
 
 func (e *env) confirmHostKey(hostname string, key ssh.PublicKey) (bool, error) {

@@ -9,11 +9,12 @@
   import HostsView from './views/HostsView.svelte'
   import KeychainView from './views/KeychainView.svelte'
   import KnownHostsView from './views/KnownHostsView.svelte'
+  import TunnelsView from './views/TunnelsView.svelte'
   import SftpView from './views/SftpView.svelte'
   import TerminalView from './views/TerminalView.svelte'
   import type { Status, Tab } from './lib/types'
 
-  type Section = 'hosts' | 'keychain' | 'knownhosts'
+  type Section = 'hosts' | 'keychain' | 'tunnels' | 'knownhosts'
 
   let hosts = $state<vault.Host[]>([])
   let keys = $state<vault.Key[]>([])
@@ -41,9 +42,9 @@
   }
 
   // Files dropped from Explorer go to the SFTP tab in front, if any.
-  function fileDrop(_x: number, _y: number, paths: string[]) {
+  function fileDrop(x: number, y: number, paths: string[]) {
     const t = tabs.find((t) => t.id === activeTab)
-    if (t?.kind === 'sftp') (views[t.id] as SftpView | undefined)?.drop(paths)
+    if (t?.kind === 'sftp') (views[t.id] as SftpView | undefined)?.drop(x, y, paths)
   }
 
   function close(id: string) {
@@ -135,6 +136,9 @@
           <button class="nav" class:on={section === 'keychain'} onclick={() => go('keychain')}>
             <Icon name="key" /> Keychain <span class="count">{keys.length}</span>
           </button>
+          <button class="nav" class:on={section === 'tunnels'} onclick={() => go('tunnels')}>
+            <Icon name="tunnel" /> Port Forwarding
+          </button>
           <button class="nav" class:on={section === 'knownhosts'} onclick={() => go('knownhosts')}>
             <Icon name="fingerprint" /> Known Hosts
           </button>
@@ -152,6 +156,8 @@
           />
         {:else if section === 'keychain'}
           <KeychainView {keys} onchange={loadKeys} />
+        {:else if section === 'tunnels'}
+          <TunnelsView {hosts} />
         {:else}
           <KnownHostsView />
         {/if}
@@ -161,7 +167,7 @@
     {#each tabs as t (t.id)}
       <div class="pane" class:hidden={activeTab !== t.id}>
         {#if t.kind === 'sftp'}
-          <SftpView bind:this={views[t.id]} sessionId={t.id} hostId={t.hostId} onstatus={(s) => setStatus(t.id, s)} />
+          <SftpView bind:this={views[t.id]} tabId={t.id} hostId={t.hostId} {hosts} onstatus={(s) => setStatus(t.id, s)} />
         {:else}
           <TerminalView
             bind:this={views[t.id]}

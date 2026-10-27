@@ -21,7 +21,13 @@ func (s *HostService) Save(in vault.HostInput) (vault.Host, error) {
 	return s.store.SaveHost(in)
 }
 
+// Delete removes the host along with its tunnels, stopping any that run.
 func (s *HostService) Delete(id string) error {
+	for _, t := range s.store.Tunnels() {
+		if t.HostID == id {
+			s.tunnels.Forget(t.ID)
+		}
+	}
 	return s.store.DeleteHost(id)
 }
 

@@ -4,9 +4,11 @@ import {sftpx} from '../models';
 
 export function Close(arg1:string):Promise<void>;
 
-export function Download(arg1:string,arg2:sftpx.FileEntry):Promise<string>;
+export function Copy(arg1:string,arg2:string,arg3:Array<string>,arg4:string,arg5:string):Promise<number>;
 
-export function List(arg1:string,arg2:string):Promise<Array<sftpx.FileEntry>>;
+export function Download(arg1:string,arg2:string,arg3:sftpx.FileEntry):Promise<string>;
+
+export function List(arg1:string,arg2:string):Promise<sftpx.Listing>;
 
 export function MakeDir(arg1:string,arg2:string):Promise<void>;
 
@@ -16,6 +18,6 @@ export function Remove(arg1:string,arg2:string):Promise<void>;
 
 export function Rename(arg1:string,arg2:string,arg3:string):Promise<void>;
 
-export function UploadDialog(arg1:string,arg2:string):Promise<number>;
+export function UploadDialog(arg1:string,arg2:string,arg3:string):Promise<number>;
 
-export function UploadPaths(arg1:string,arg2:string,arg3:Array<string>):Promise<number>;
+export function UploadPaths(arg1:string,arg2:string,arg3:string,arg4:Array<string>):Promise<number>;
