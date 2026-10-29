@@ -47,6 +47,96 @@ export namespace services {
 	        this.knownHostsAdded = source["knownHostsAdded"];
 	    }
 	}
+	export class SSHConfigHost {
+	    alias: string;
+	    address: string;
+	    port: number;
+	    username: string;
+	    keyPath: string;
+	    keyStatus: string;
+	    keyError: string;
+	    duplicate: boolean;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigHost(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.alias = source["alias"];
+	        this.address = source["address"];
+	        this.port = source["port"];
+	        this.username = source["username"];
+	        this.keyPath = source["keyPath"];
+	        this.keyStatus = source["keyStatus"];
+	        this.keyError = source["keyError"];
+	        this.duplicate = source["duplicate"];
+	    }
+	}
+	export class SSHConfigImport {
+	    aliases: string[];
+	    passphrases: Record<string, string>;
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigImport(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.aliases = source["aliases"];
+	        this.passphrases = source["passphrases"];
+	    }
+	}
+	export class SSHConfigPreview {
+	    path: string;
+	    hosts: SSHConfigHost[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigPreview(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.path = source["path"];
+	        this.hosts = this.convertValues(source["hosts"], SSHConfigHost);
+	    }
+	
+		convertValues(a: any, classs: any, asMap: boolean = false): any {
+		    if (!a) {
+		        return a;
+		    }
+		    if (a.slice && a.map) {
+		        return (a as any[]).map(elem => this.convertValues(elem, classs));
+		    } else if ("object" === typeof a) {
+		        if (asMap) {
+		            for (const key of Object.keys(a)) {
+		                a[key] = new classs(a[key]);
+		            }
+		            return a;
+		        }
+		        return new classs(a);
+		    }
+		    return a;
+		}
+	}
+	export class SSHConfigResult {
+	    hostsAdded: number;
+	    hostsSkipped: number;
+	    keysAdded: number;
+	    noKey: string[];
+	
+	    static createFrom(source: any = {}) {
+	        return new SSHConfigResult(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.hostsAdded = source["hostsAdded"];
+	        this.hostsSkipped = source["hostsSkipped"];
+	        this.keysAdded = source["keysAdded"];
+	        this.noKey = source["noKey"];
+	    }
+	}
 	export class TunnelView {
 	    id: string;
 	    label: string;
