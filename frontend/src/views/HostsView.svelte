@@ -2,6 +2,7 @@
   import type { vault } from '../../wailsjs/go/models'
   import BackupDialog from '../components/BackupDialog.svelte'
   import Icon from '../components/Icon.svelte'
+  import SshConfigDialog from '../components/SshConfigDialog.svelte'
 
   let {
     hosts,
@@ -23,6 +24,7 @@
 
   let query = $state('')
   let backup = $state<'export' | 'import' | null>(null)
+  let sshConfig = $state(false)
 
   // Addresses are hidden by default so they don't leak during screen sharing.
   // The choice is a per-device convenience, so localStorage is enough.
@@ -67,6 +69,9 @@
   <div class="toolbar">
     <input type="search" placeholder="Cari host, alamat, user…" bind:value={query} />
     <span class="spacer"></span>
+    <button onclick={() => (sshConfig = true)} title="Import host dari ~/.ssh/config">
+      <Icon name="file" size={14} /> SSH config
+    </button>
     <button onclick={() => (backup = 'import')} title="Import host dari file backup"><Icon name="import" size={14} /> Import</button>
     <button onclick={() => (backup = 'export')} title="Export semua host ke file backup terenkripsi">
       <Icon name="upload" size={14} /> Export
@@ -87,6 +92,7 @@
       <p>Belum ada host tersimpan.</p>
       <div class="empty-actions">
         <button class="primary" onclick={() => onedit(null)}>Tambah host pertama</button>
+        <button onclick={() => (sshConfig = true)}>Import dari SSH config</button>
         <button onclick={() => (backup = 'import')}>Import dari backup</button>
       </div>
     </div>
@@ -124,6 +130,10 @@
 
 {#if backup}
   <BackupDialog mode={backup} {onimported} oncancel={() => (backup = null)} />
+{/if}
+
+{#if sshConfig}
+  <SshConfigDialog {reveal} {onimported} oncancel={() => (sshConfig = false)} />
 {/if}
 
 <style>

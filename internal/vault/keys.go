@@ -44,6 +44,9 @@ func GeneratePrivateKey(kind string) (any, error) {
 	return nil, fmt.Errorf("jenis key tidak dikenal: %s", kind)
 }
 
+// ErrPassphraseNeeded is returned by ParsePrivateKey for an encrypted key given no passphrase.
+var ErrPassphraseNeeded = errors.New("key ini terenkripsi, isi passphrase-nya")
+
 // ParsePrivateKey accepts any key format x/crypto/ssh understands (OpenSSH, PEM PKCS#1/#8, EC).
 func ParsePrivateKey(data []byte, passphrase string) (any, error) {
 	var raw any
@@ -56,7 +59,7 @@ func ParsePrivateKey(data []byte, passphrase string) (any, error) {
 	var missing *ssh.PassphraseMissingError
 	switch {
 	case errors.As(err, &missing):
-		return nil, errors.New("key ini terenkripsi, isi passphrase-nya")
+		return nil, ErrPassphraseNeeded
 	case errors.Is(err, x509.IncorrectPasswordError):
 		return nil, errors.New("passphrase SSH key salah")
 	case err != nil && strings.Contains(err.Error(), "PuTTY"):

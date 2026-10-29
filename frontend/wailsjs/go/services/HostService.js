@@ -6,8 +6,16 @@ export function Delete(arg1) {
   return window['go']['services']['HostService']['Delete'](arg1);
 }
 
+export function ImportSSHConfig(arg1) {
+  return window['go']['services']['HostService']['ImportSSHConfig'](arg1);
+}
+
 export function List() {
   return window['go']['services']['HostService']['List']();
+}
+
+export function PreviewSSHConfig() {
+  return window['go']['services']['HostService']['PreviewSSHConfig']();
 }
 
 export function Save(arg1) {
