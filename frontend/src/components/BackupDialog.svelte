@@ -111,6 +111,7 @@
         <li><strong>{result.hostsAdded}</strong> host ditambahkan{#if result.hostsSkipped}, {result.hostsSkipped} dilewati karena sudah ada{/if}</li>
         <li><strong>{result.keysAdded}</strong> SSH key ditambahkan{#if result.keysSkipped}, {result.keysSkipped} sudah ada{/if}</li>
         <li><strong>{result.knownHostsAdded}</strong> known host ditambahkan</li>
+        {#if result.snippetsAdded}<li><strong>{result.snippetsAdded}</strong> snippet ditambahkan</li>{/if}
       </ul>
     {:else}
       <div class="field">

@@ -253,6 +253,49 @@ func pipe(a net.Conn, b ssh.Channel) {
 	b.Close()
 }
 
+// ExecFunc runs a command for StartExecServer and returns its exit status.
+// stop is closed when the client sends a signal or closes the session.
+type ExecFunc func(cmd string, stdout, stderr io.Writer, stop <-chan struct{}) int
+
+// StartExecServer runs an SSH server that accepts any client and answers
+// "exec" requests with run. It returns the listen address.
+func StartExecServer(t *testing.T, run ExecFunc) string {
+	t.Helper()
+	cfg := &ssh.ServerConfig{NoClientAuth: true}
+	cfg.AddHostKey(HostKey(t))
+	return serve(t, cfg, func(nc ssh.NewChannel) {
+		if nc.ChannelType() != "session" {
+			nc.Reject(ssh.UnknownChannelType, "session only")
+			return
+		}
+		ch, reqs, err := nc.Accept()
+		if err != nil {
+			return
+		}
+		stop := make(chan struct{})
+		var once sync.Once
+		halt := func() { once.Do(func() { close(stop) }) }
+		defer halt()
+		for req := range reqs {
+			switch req.Type {
+			case "exec":
+				var p struct{ Command string }
+				ssh.Unmarshal(req.Payload, &p)
+				req.Reply(true, nil)
+				go func() {
+					status := run(p.Command, ch, ch.Stderr(), stop)
+					ch.SendRequest("exit-status", false, ssh.Marshal(struct{ Status uint32 }{uint32(status)}))
+					ch.Close()
+				}()
+			case "signal":
+				halt()
+			default:
+				req.Reply(false, nil)
+			}
+		}
+	})
+}
+
 // EchoServer listens on localhost and echoes back everything it receives.
 func EchoServer(t *testing.T) string {
 	t.Helper()

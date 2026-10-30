@@ -112,3 +112,37 @@ func TestMigratesV1KeyPathHosts(t *testing.T) {
 		t.Fatalf("reload failed: %v", err)
 	}
 }
+
+func TestSnippetsPersistAndMerge(t *testing.T) {
+	dir := t.TempDir()
+	store, _ := Open(dir)
+	if _, err := store.SaveSnippet(Snippet{Name: "x"}); err == nil {
+		t.Fatal("snippet without a command was accepted")
+	}
+	sn, err := store.SaveSnippet(Snippet{Command: "  df -h\nfree -m "})
+	if err != nil || sn.ID == "" || sn.Name != "df -h" || sn.Command != "df -h\nfree -m" {
+		t.Fatalf("got %+v, %v", sn, err)
+	}
+	sn.Name = "disk"
+	if _, err := store.SaveSnippet(sn); err != nil {
+		t.Fatal(err)
+	}
+	reopened, _ := Open(dir)
+	if got := reopened.Snippets(); len(got) != 1 || got[0].Name != "disk" {
+		t.Fatalf("after reload: %+v", got)
+	}
+
+	snap, _ := reopened.Snapshot()
+	other, _ := Open(t.TempDir())
+	res, err := other.Merge(snap)
+	if err != nil || res.SnippetsAdded != 1 {
+		t.Fatalf("merge: %+v, %v", res, err)
+	}
+	if res, _ := other.Merge(snap); res.SnippetsAdded != 0 {
+		t.Fatal("snippet merged twice")
+	}
+
+	if err := reopened.DeleteSnippet(sn.ID); err != nil || len(reopened.Snippets()) != 0 {
+		t.Fatalf("delete: %v", err)
+	}
+}

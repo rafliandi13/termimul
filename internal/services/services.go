@@ -8,6 +8,7 @@ import (
 	"context"
 	"fmt"
 	"path/filepath"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 	"golang.org/x/crypto/ssh"
@@ -27,6 +28,8 @@ type env struct {
 	hostKeys *knownhosts.DB
 	dialer   *sshx.Dialer
 	tunnels  *tunnel.Manager
+
+	confirmMu sync.Mutex // one host-key dialog at a time when hosts are dialled in parallel
 }
 
 type Services struct {
@@ -38,6 +41,7 @@ type Services struct {
 	SFTP       *SFTPService
 	Backup     *BackupService
 	Tunnels    *TunnelService
+	Snippets   *SnippetService
 }
 
 // New opens the data folder (hosts.json, known_hosts) and wires the services.
@@ -62,12 +66,13 @@ func New(dataDir string) (*Services, error) {
 		SFTP:       &SFTPService{env: e, sessions: sftpx.NewManager()},
 		Backup:     &BackupService{e},
 		Tunnels:    &TunnelService{e},
+		Snippets:   &SnippetService{env: e, runs: map[string]context.CancelFunc{}},
 	}, nil
 }
 
 // Bind lists the services to expose to the frontend.
 func (s *Services) Bind() []any {
-	return []any{s.Hosts, s.Keychain, s.KnownHosts, s.Terminal, s.SFTP, s.Backup, s.Tunnels}
+	return []any{s.Hosts, s.Keychain, s.KnownHosts, s.Terminal, s.SFTP, s.Backup, s.Tunnels, s.Snippets}
 }
 
 func (s *Services) Startup(ctx context.Context) {
@@ -76,12 +81,15 @@ func (s *Services) Startup(ctx context.Context) {
 }
 
 func (s *Services) Shutdown(context.Context) {
+	s.Snippets.cancelAll()
 	s.Terminal.sessions.CloseAll()
 	s.SFTP.sessions.CloseAll()
 	s.env.tunnels.StopAll()
 }
 
 func (e *env) confirmHostKey(hostname string, key ssh.PublicKey) (bool, error) {
+	e.confirmMu.Lock()
+	defer e.confirmMu.Unlock()
 	answer, err := runtime.MessageDialog(e.ctx, runtime.MessageDialogOptions{
 		Type:  runtime.QuestionDialog,
 		Title: "Host baru",

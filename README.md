@@ -7,6 +7,20 @@
 <p align="center">A lightweight, open-source SSH client for managing many servers.<br>
 Windows · macOS · Linux</p>
 
+<p align="center">
+  <a href="https://github.com/rafliandi13/termimul/actions/workflows/release.yml"><img src="https://github.com/rafliandi13/termimul/actions/workflows/release.yml/badge.svg" alt="Build status"></a>
+  <a href="https://github.com/rafliandi13/termimul/releases/latest"><img src="https://img.shields.io/github/v/release/rafliandi13/termimul" alt="Latest release"></a>
+  <a href="LICENSE"><img src="https://img.shields.io/github/license/rafliandi13/termimul" alt="MIT License"></a>
+</p>
+
+<p align="center">
+  <a href="#features">Features</a> ·
+  <a href="#install">Install</a> ·
+  <a href="#build-from-source">Build from source</a> ·
+  <a href="#roadmap">Roadmap</a> ·
+  <a href="CONTRIBUTING.md">Contributing</a>
+</p>
+
 Termimul keeps your servers in one place, organised by group, and opens each
 one in its own terminal or file-browser tab with a single click. It is a small
 native app built with Go and [Wails](https://wails.io) that uses the operating
@@ -15,10 +29,12 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 ## Features
 
 - **Host manager**: add, edit, and delete hosts; organise them into groups; search by name, address, or user.
+- **Import from SSH config**: bring in hosts from `~/.ssh/config`, including files pulled in with `Include`. Preview them first, skip ones you already have, and copy their keys into the Keychain.
+- **Snippets**: save commands and run them on several hosts or a whole group at once. Each host gets its own panel with live output, exit code and duration, with a concurrency limit, a timeout, and a button to cancel the batch.
 - **Keychain**: generate ED25519 / RSA 4096 / ECDSA keys or import existing ones (including passphrase-protected keys), and copy the public key in one click. Keys are stored encrypted inside Termimul, so hosts don't depend on a key file path.
 - **Dual-pane SFTP**: each pane shows this computer or any saved server. Copy files and folders between panes with the arrow buttons or by dragging, **including directly from one server to another** (streamed through the app, nothing is stored on your disk). Upload by dragging files in from your file manager; rename, delete, create folders, multi-select with Ctrl/Shift.
 - **Port forwarding**: saved local (`-L`), remote (`-R`) and dynamic SOCKS5 (`-D`) tunnels with one-click start/stop, live status and connection count, and optional auto-start when the app opens. Tunnels listen on 127.0.0.1 unless you choose otherwise.
-- **Export / import**: move all hosts, passwords, keychain keys and known hosts to another device (any OS) as one `.termimul` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
+- **Export / import**: move all hosts, passwords, keychain keys, tunnels, snippets and known hosts to another device (any OS) as one `.termimul` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
 - **Known hosts**: you confirm a server's fingerprint the first time you connect; changed keys are refused. View, delete, or import entries from `~/.ssh/known_hosts`.
 - **Encrypted credentials**: passwords and keys are encrypted with the OS credential store (see below) and never sent to the UI.
 - **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the tab; a dropped connection keeps it open with a **Reconnect** button.
@@ -56,7 +72,7 @@ The builds are not code-signed yet, so the first launch needs one extra step:
 | macOS | `~/Library/Application Support/termimul/` |
 | Linux | `~/.config/termimul/` |
 
-The folder holds `hosts.json` (hosts and keychain, with secrets encrypted) and
+The folder holds `hosts.json` (hosts, keychain, tunnels and snippets, with secrets encrypted) and
 `known_hosts`. Uninstalling does not delete it, so your data survives a reinstall.
 
 How secrets are encrypted:
@@ -102,7 +118,9 @@ internal/
     backup.go            BackupService (export / import)
     sessions.go          TerminalService, SFTPService (push output/progress as events)
     tunnels.go           TunnelService (port forwarding)
-  vault/                 hosts.json: hosts + keychain, format migration, snapshot/merge
+    sshconfig.go         HostService import from ~/.ssh/config
+    snippets.go          SnippetService (saved commands, batch runs)
+  vault/                 hosts.json: hosts, keychain, tunnels, snippets, format migration, snapshot/merge
   backup/                password-protected .termimul export files
   secret/                encryption at rest: DPAPI (Windows), Keychain / Secret Service + AES-GCM
   sshx/                  dialing, authentication, keep-alive
@@ -110,13 +128,15 @@ internal/
   terminal/              interactive PTY sessions
   sftpx/                 dual-pane browsing: local and SFTP filesystems, copies between any two
   tunnel/                local, remote and SOCKS5 port forwarding
-  sshtest/               throwaway SSH/SFTP servers for tests
+  sshconfig/             ~/.ssh/config parser (Include, wildcards, first value wins)
+  runner/                one command on many hosts: concurrency, timeout, cancel, streamed output
+  sshtest/               throwaway SSH, SFTP and exec servers for tests
   fsutil/                atomic writes, ~ expansion
 frontend/src/
   App.svelte             tabs and navigation
-  views/                 Hosts, Keychain, Known Hosts, Terminal, SFTP screens
+  views/                 Hosts, Keychain, Tunnels, Snippets, Known Hosts, Terminal, SFTP screens
   components/            dialogs, forms, icons
-  lib/                   shared types and helpers
+  lib/                   shared types, helpers, snippet run state
 build/                   icons, Windows installer, macOS Info.plist, Linux packaging
 ```
 
@@ -131,15 +151,16 @@ frontend calls e.g. `HostService.List()` with full TypeScript types. Packages un
 - [x] macOS and Linux builds
 - [x] Port forwarding
 - [x] Dual-pane SFTP with server-to-server copy
-- [ ] Import hosts from `~/.ssh/config`
+- [x] Import hosts from `~/.ssh/config`
+- [x] Snippets that run one command on several servers
 - [ ] Sync hosts between devices (encrypted, via a folder such as OneDrive / Dropbox)
-- [ ] Snippets that run one command on several servers
 - [ ] Split panes
 
 ## Contributing
 
-Issues and pull requests are welcome. Before opening a PR, please run
-`go test ./...` and `npm run check` in `frontend/`.
+Issues and pull requests are welcome. See [CONTRIBUTING.md](CONTRIBUTING.md) for
+how to set up the project, the code conventions, and what to check before opening
+a pull request.
 
 ## License
 
