@@ -21,24 +21,31 @@ type PortableKey struct {
 }
 
 type Snapshot struct {
-	Hosts   []PortableHost `json:"hosts"`
-	Keys    []PortableKey  `json:"keys"`
-	Tunnels []Tunnel       `json:"tunnels"`
+	Hosts    []PortableHost `json:"hosts"`
+	Keys     []PortableKey  `json:"keys"`
+	Tunnels  []Tunnel       `json:"tunnels"`
+	Snippets []Snippet      `json:"snippets"`
 }
 
 type MergeResult struct {
-	HostsAdded   int `json:"hostsAdded"`
-	HostsSkipped int `json:"hostsSkipped"`
-	KeysAdded    int `json:"keysAdded"`
-	KeysSkipped  int `json:"keysSkipped"`
-	TunnelsAdded int `json:"tunnelsAdded"`
+	HostsAdded    int `json:"hostsAdded"`
+	HostsSkipped  int `json:"hostsSkipped"`
+	KeysAdded     int `json:"keysAdded"`
+	KeysSkipped   int `json:"keysSkipped"`
+	TunnelsAdded  int `json:"tunnelsAdded"`
+	SnippetsAdded int `json:"snippetsAdded"`
 }
 
 // Snapshot returns every host and key with secrets decrypted, for export.
 func (s *Store) Snapshot() (Snapshot, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	snap := Snapshot{Hosts: []PortableHost{}, Keys: []PortableKey{}, Tunnels: append([]Tunnel{}, s.data.Tunnels...)}
+	snap := Snapshot{
+		Hosts:    []PortableHost{},
+		Keys:     []PortableKey{},
+		Tunnels:  append([]Tunnel{}, s.data.Tunnels...),
+		Snippets: append([]Snippet{}, s.data.Snippets...),
+	}
 	for _, k := range s.data.Keys {
 		pemText, err := secret.Open(k.PrivateEnc)
 		if err != nil {
@@ -72,6 +79,7 @@ func (s *Store) Merge(snap Snapshot) (MergeResult, error) {
 	before.Hosts = append([]hostRecord(nil), s.data.Hosts...)
 	before.Keys = append([]keyRecord(nil), s.data.Keys...)
 	before.Tunnels = append([]Tunnel(nil), s.data.Tunnels...)
+	before.Snippets = append([]Snippet(nil), s.data.Snippets...)
 	res, err := s.mergeLocked(snap)
 	if err == nil {
 		err = s.flush()
@@ -138,6 +146,15 @@ func (s *Store) mergeLocked(snap Snapshot) (MergeResult, error) {
 		t.ID, t.HostID = newID(), hostID
 		s.data.Tunnels = append(s.data.Tunnels, t)
 		res.TunnelsAdded++
+	}
+
+	for _, sn := range snap.Snippets {
+		if s.hasSnippetLocked(sn) {
+			continue
+		}
+		sn.ID = newID()
+		s.data.Snippets = append(s.data.Snippets, sn)
+		res.SnippetsAdded++
 	}
 	return res, nil
 }

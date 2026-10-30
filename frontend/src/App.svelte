@@ -10,11 +10,12 @@
   import KeychainView from './views/KeychainView.svelte'
   import KnownHostsView from './views/KnownHostsView.svelte'
   import TunnelsView from './views/TunnelsView.svelte'
+  import SnippetsView from './views/SnippetsView.svelte'
   import SftpView from './views/SftpView.svelte'
   import TerminalView from './views/TerminalView.svelte'
   import type { Status, Tab } from './lib/types'
 
-  type Section = 'hosts' | 'keychain' | 'tunnels' | 'knownhosts'
+  type Section = 'hosts' | 'keychain' | 'tunnels' | 'snippets' | 'knownhosts'
 
   let hosts = $state<vault.Host[]>([])
   let keys = $state<vault.Key[]>([])
@@ -139,6 +140,9 @@
           <button class="nav" class:on={section === 'tunnels'} onclick={() => go('tunnels')}>
             <Icon name="tunnel" /> Port Forwarding
           </button>
+          <button class="nav" class:on={section === 'snippets'} onclick={() => go('snippets')}>
+            <Icon name="snippet" /> Snippets
+          </button>
           <button class="nav" class:on={section === 'knownhosts'} onclick={() => go('knownhosts')}>
             <Icon name="fingerprint" /> Known Hosts
           </button>
@@ -158,6 +162,8 @@
           <KeychainView {keys} onchange={loadKeys} />
         {:else if section === 'tunnels'}
           <TunnelsView {hosts} />
+        {:else if section === 'snippets'}
+          <SnippetsView {hosts} />
         {:else}
           <KnownHostsView />
         {/if}

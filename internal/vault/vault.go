@@ -60,10 +60,11 @@ type hostRecord struct {
 }
 
 type file struct {
-	Version int          `json:"version"`
-	Hosts   []hostRecord `json:"hosts"`
-	Keys    []keyRecord  `json:"keys"`
-	Tunnels []Tunnel     `json:"tunnels"`
+	Version  int          `json:"version"`
+	Hosts    []hostRecord `json:"hosts"`
+	Keys     []keyRecord  `json:"keys"`
+	Tunnels  []Tunnel     `json:"tunnels"`
+	Snippets []Snippet    `json:"snippets"`
 }
 
 type Store struct {

@@ -31,6 +31,7 @@ export namespace services {
 	    keysAdded: number;
 	    keysSkipped: number;
 	    tunnelsAdded: number;
+	    snippetsAdded: number;
 	    knownHostsAdded: number;
 	
 	    static createFrom(source: any = {}) {
@@ -44,7 +45,26 @@ export namespace services {
 	        this.keysAdded = source["keysAdded"];
 	        this.keysSkipped = source["keysSkipped"];
 	        this.tunnelsAdded = source["tunnelsAdded"];
+	        this.snippetsAdded = source["snippetsAdded"];
 	        this.knownHostsAdded = source["knownHostsAdded"];
+	    }
+	}
+	export class RunRequest {
+	    command: string;
+	    hostIds: string[];
+	    concurrency: number;
+	    timeoutSec: number;
+	
+	    static createFrom(source: any = {}) {
+	        return new RunRequest(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.command = source["command"];
+	        this.hostIds = source["hostIds"];
+	        this.concurrency = source["concurrency"];
+	        this.timeoutSec = source["timeoutSec"];
 	    }
 	}
 	export class SSHConfigHost {
@@ -366,6 +386,22 @@ export namespace vault {
 	        this.fingerprint = source["fingerprint"];
 	        this.publicKey = source["publicKey"];
 	        this.createdAt = source["createdAt"];
+	    }
+	}
+	export class Snippet {
+	    id: string;
+	    name: string;
+	    command: string;
+	
+	    static createFrom(source: any = {}) {
+	        return new Snippet(source);
+	    }
+	
+	    constructor(source: any = {}) {
+	        if ('string' === typeof source) source = JSON.parse(source);
+	        this.id = source["id"];
+	        this.name = source["name"];
+	        this.command = source["command"];
 	    }
 	}
 	export class Tunnel {

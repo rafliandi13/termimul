@@ -42,12 +42,33 @@ func (d *Dialer) Dial(ctx context.Context, hostID string) (*ssh.Client, error) {
 		Timeout:         15 * time.Second,
 	}
 	addr := net.JoinHostPort(host.Address, strconv.Itoa(host.Port))
-	client, err := ssh.Dial("tcp", addr, cfg)
+	client, err := dialContext(ctx, addr, cfg)
 	if err != nil {
 		return nil, FriendlyError(err)
 	}
 	go keepAlive(ctx, client)
 	return client, nil
+}
+
+// dialContext is ssh.Dial that gives up, mid-handshake too, once ctx ends.
+func dialContext(ctx context.Context, addr string, cfg *ssh.ClientConfig) (*ssh.Client, error) {
+	conn, err := (&net.Dialer{Timeout: cfg.Timeout}).DialContext(ctx, "tcp", addr)
+	if err != nil {
+		return nil, err
+	}
+	stop := context.AfterFunc(ctx, func() { conn.Close() })
+	c, chans, reqs, err := ssh.NewClientConn(conn, addr, cfg)
+	if !stop() {
+		if err == nil {
+			c.Close()
+		}
+		return nil, ctx.Err()
+	}
+	if err != nil {
+		conn.Close()
+		return nil, err
+	}
+	return ssh.NewClient(c, chans, reqs), nil
 }
 
 func AuthMethods(host vault.Host, sec vault.Secrets) ([]ssh.AuthMethod, error) {
