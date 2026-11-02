@@ -1,4 +1,4 @@
-// Package terminal runs interactive shell sessions over SSH, one per tab.
+// Package terminal runs interactive shell sessions over SSH, one per pane.
 package terminal
 
 import (

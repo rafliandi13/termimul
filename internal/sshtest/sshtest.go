@@ -296,6 +296,52 @@ func StartExecServer(t *testing.T, run ExecFunc) string {
 	})
 }
 
+// ShellServer is a fake interactive shell for one session at a time: it echoes
+// stdin and records the terminal size the client asks for.
+type ShellServer struct {
+	Addr   string
+	Sizes  chan [2]int   // {cols, rows} from pty-req and window-change, in order
+	Closed chan struct{} // receives once per session that ended
+}
+
+// StartShellServer runs an SSH server that accepts any client.
+func StartShellServer(t *testing.T) *ShellServer {
+	t.Helper()
+	s := &ShellServer{Sizes: make(chan [2]int, 16), Closed: make(chan struct{}, 4)}
+	cfg := &ssh.ServerConfig{NoClientAuth: true}
+	cfg.AddHostKey(HostKey(t))
+	s.Addr = serve(t, cfg, func(nc ssh.NewChannel) {
+		ch, reqs, err := nc.Accept()
+		if err != nil {
+			return
+		}
+		for req := range reqs {
+			switch req.Type {
+			case "pty-req":
+				var p struct {
+					Term             string
+					Cols, Rows, W, H uint32
+					Modes            string
+				}
+				ssh.Unmarshal(req.Payload, &p)
+				s.Sizes <- [2]int{int(p.Cols), int(p.Rows)}
+				req.Reply(true, nil)
+			case "window-change":
+				var p struct{ Cols, Rows, W, H uint32 }
+				ssh.Unmarshal(req.Payload, &p)
+				s.Sizes <- [2]int{int(p.Cols), int(p.Rows)}
+			case "shell":
+				req.Reply(true, nil)
+				go io.Copy(ch, ch)
+			default:
+				req.Reply(false, nil)
+			}
+		}
+		s.Closed <- struct{}{}
+	})
+	return s
+}
+
 // EchoServer listens on localhost and echoes back everything it receives.
 func EchoServer(t *testing.T) string {
 	t.Helper()

@@ -62,7 +62,7 @@ func New(dataDir string) (*Services, error) {
 		Hosts:      &HostService{e},
 		Keychain:   &KeychainService{e},
 		KnownHosts: &KnownHostService{e},
-		Terminal:   &TerminalService{env: e, sessions: terminal.NewManager()},
+		Terminal:   &TerminalService{env: e, sessions: terminal.NewManager(), conns: map[string]context.CancelFunc{}},
 		SFTP:       &SFTPService{env: e, sessions: sftpx.NewManager()},
 		Backup:     &BackupService{e},
 		Tunnels:    &TunnelService{e},

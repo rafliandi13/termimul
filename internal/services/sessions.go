@@ -1,8 +1,10 @@
 package services
 
 import (
+	"context"
 	"encoding/base64"
 	"path/filepath"
+	"sync"
 
 	"github.com/wailsapp/wails/v2/pkg/runtime"
 
@@ -10,30 +12,49 @@ import (
 	"termimul/internal/terminal"
 )
 
-// TerminalService runs shell tabs. Output is pushed to the frontend as events:
+// TerminalService runs shell sessions, one per terminal pane. Output is pushed to the frontend as events:
 // "ssh:data:<id>" (base64 bytes) and "ssh:closed:<id>" (true if the user logged out).
 type TerminalService struct {
 	*env
 	sessions *terminal.Manager
+
+	mu    sync.Mutex
+	conns map[string]context.CancelFunc // per session: ends its dial and keep-alive
 }
 
 // Connect opens a shell for hostID. The frontend picks sessionID and subscribes
 // to the events before calling, so no output is missed.
 func (s *TerminalService) Connect(sessionID, hostID string, cols, rows int) error {
-	client, err := s.dialer.Dial(s.ctx, hostID)
+	ctx, cancel := context.WithCancel(s.ctx)
+	s.mu.Lock()
+	s.conns[sessionID] = cancel
+	s.mu.Unlock()
+
+	client, err := s.dialer.Dial(ctx, hostID)
 	if err != nil {
+		s.release(sessionID)
 		return err
 	}
-	return s.sessions.Start(sessionID, client, cols, rows, terminal.Handlers{
+	err = s.sessions.Start(sessionID, client, cols, rows, terminal.Handlers{
 		// Base64 keeps multi-byte UTF-8 sequences split across reads intact;
 		// xterm.js reassembles the bytes.
 		OnData: func(b []byte) {
 			runtime.EventsEmit(s.ctx, "ssh:data:"+sessionID, base64.StdEncoding.EncodeToString(b))
 		},
 		OnClose: func(loggedOut bool) {
+			s.release(sessionID)
 			runtime.EventsEmit(s.ctx, "ssh:closed:"+sessionID, loggedOut)
 		},
 	})
+	if err != nil {
+		s.release(sessionID)
+		return err
+	}
+	// Disconnected while connecting: it found no session to close, so close it here.
+	if ctx.Err() != nil {
+		s.sessions.Close(sessionID)
+	}
+	return nil
 }
 
 func (s *TerminalService) Write(sessionID, data string) error {
@@ -45,7 +66,18 @@ func (s *TerminalService) Resize(sessionID string, cols, rows int) error {
 }
 
 func (s *TerminalService) Disconnect(sessionID string) {
+	s.release(sessionID)
 	s.sessions.Close(sessionID)
+}
+
+func (s *TerminalService) release(sessionID string) {
+	s.mu.Lock()
+	cancel := s.conns[sessionID]
+	delete(s.conns, sessionID)
+	s.mu.Unlock()
+	if cancel != nil {
+		cancel()
+	}
 }
 
 // LocalSource is the source name for "this computer" in a file-browser pane.
