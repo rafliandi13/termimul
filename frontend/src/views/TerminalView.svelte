@@ -12,22 +12,34 @@
     sessionId,
     hostId,
     active,
+    focused,
     onstatus,
     onlogout,
+    ondata,
+    onfocus,
+    onmenu,
+    ownskey,
   }: {
     sessionId: string
     hostId: string
-    active: boolean
+    active: boolean // the tab is in front
+    focused: boolean // this is the tab's focused pane
     onstatus: (s: Status) => void
     onlogout: () => void
+    ondata: (data: string) => void
+    onfocus: () => void
+    onmenu: (x: number, y: number, hasSelection: boolean) => void
+    ownskey: (e: KeyboardEvent) => boolean // the tab handles this key; don't send it to the server
   } = $props()
 
   let el: HTMLDivElement
   let term: Terminal | undefined
   let fit: FitAddon | undefined
   let observer: ResizeObserver | undefined
+  let refitTimer: ReturnType<typeof setTimeout> | undefined
+  let status = $state<Status>('connecting')
 
-  // A tab's sessionId is fixed for its lifetime.
+  // A pane's sessionId is fixed for its lifetime.
   const dataEvent = untrack(() => `ssh:data:${sessionId}`)
   const closedEvent = untrack(() => `ssh:closed:${sessionId}`)
 
@@ -60,6 +72,7 @@
   // pastes. Ctrl+Shift+C/V and Cmd+C/V (macOS) do the same. Returning false
   // stops xterm from also sending the key to the server.
   function handleKey(e: KeyboardEvent): boolean {
+    if (ownskey(e)) return false
     if (!(e.ctrlKey || e.metaKey) || e.altKey) return true
     const key = e.key.toLowerCase()
     if (key === 'c' && (term?.hasSelection() || e.shiftKey || e.metaKey)) {
@@ -79,23 +92,26 @@
     return true
   }
 
-  // Right click copies the selection, or pastes when nothing is selected.
   function onContextMenu(e: MouseEvent) {
     e.preventDefault()
-    if (term?.hasSelection()) copySelection()
-    else pasteClipboard()
+    onmenu(e.clientX, e.clientY, !!term?.hasSelection())
+  }
+
+  function setStatus(s: Status) {
+    status = s
+    onstatus(s)
   }
 
   async function connect() {
     if (!term) return
-    onstatus('connecting')
+    setStatus('connecting')
     term.write('\x1b[90mMenghubungkan...\x1b[0m\r\n')
     try {
       await TerminalSvc.Connect(sessionId, hostId, term.cols, term.rows)
-      onstatus('connected')
+      setStatus('connected')
     } catch (e) {
       term.write(`\x1b[31m${e}\x1b[0m\r\n`)
-      onstatus('error')
+      setStatus('error')
     }
   }
 
@@ -113,6 +129,7 @@
     term.open(el)
     term.attachCustomKeyEventHandler(handleKey)
     el.addEventListener('contextmenu', onContextMenu)
+    el.addEventListener('focusin', onfocus)
     refit()
 
     EventsOn(dataEvent, (b64: string) => term?.write(decode(b64)))
@@ -122,21 +139,26 @@
         return
       }
       term?.write('\r\n\x1b[31m[koneksi terputus]\x1b[0m\r\n')
-      onstatus('closed')
+      setStatus('closed')
     })
-    term.onData((d) => TerminalSvc.Write(sessionId, d).catch(() => {}))
+    term.onData(ondata)
     term.onResize(({ cols, rows }) => TerminalSvc.Resize(sessionId, cols, rows).catch(() => {}))
 
-    observer = new ResizeObserver(refit)
+    // Coalesced so dragging a divider doesn't send a window-change per pixel.
+    observer = new ResizeObserver(() => {
+      clearTimeout(refitTimer)
+      refitTimer = setTimeout(refit, 30)
+    })
     observer.observe(el)
     connect()
   })
 
   $effect(() => {
     if (active) {
+      const focus = focused
       requestAnimationFrame(() => {
         refit()
-        term?.focus()
+        if (focus) term?.focus()
       })
     }
   })
@@ -145,18 +167,35 @@
     EventsOff(dataEvent)
     EventsOff(closedEvent)
     observer?.disconnect()
+    clearTimeout(refitTimer)
     el?.removeEventListener('contextmenu', onContextMenu)
+    el?.removeEventListener('focusin', onfocus)
     TerminalSvc.Disconnect(sessionId)
     term?.dispose()
   })
 
-  export function reconnect() {
+  function reconnect() {
     term?.reset()
     connect()
+  }
+
+  export function copy() {
+    copySelection()
+  }
+
+  export function paste() {
+    pasteClipboard()
+  }
+
+  export function focus() {
+    term?.focus()
   }
 </script>
 
 <div class="term" bind:this={el}></div>
+{#if status === 'closed' || status === 'error'}
+  <button class="primary reconnect" onclick={reconnect}>Hubungkan ulang</button>
+{/if}
 
 <style>
   .term {
@@ -164,5 +203,10 @@
     inset: 0;
     padding: 8px 0 0 10px;
     background: var(--term-bg);
+  }
+  .reconnect {
+    position: absolute;
+    right: 20px;
+    bottom: 20px;
   }
 </style>

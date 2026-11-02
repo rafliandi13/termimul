@@ -37,11 +37,13 @@ system's own web view (WebView2, WKWebView, WebKitGTK) instead of bundling a bro
 - **Export / import**: move all hosts, passwords, keychain keys, tunnels, snippets and known hosts to another device (any OS) as one `.termimul` file, encrypted with a password you choose (Argon2id + AES-256-GCM). Importing merges and skips what already exists.
 - **Known hosts**: you confirm a server's fingerprint the first time you connect; changed keys are refused. View, delete, or import entries from `~/.ssh/known_hosts`.
 - **Encrypted credentials**: passwords and keys are encrypted with the OS credential store (see below) and never sent to the UI.
-- **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the tab; a dropped connection keeps it open with a **Reconnect** button.
+- **Tabbed terminals** powered by [xterm.js](https://xtermjs.org), with clickable links, 5,000 lines of scrollback, and keep-alive. Typing `exit` closes the pane; a dropped connection keeps it open with a **Reconnect** button.
+- **Split panes**: split a terminal tab side by side or stacked, as deep as you like, with a separate SSH session in each pane to the same host or another one. Drag the dividers to resize, and optionally send your typing to every pane in the tab.
 
-Keyboard shortcuts: `Ctrl+Tab` / `Ctrl+Shift+Tab` switch tabs, `Ctrl+W` closes the current tab.
+Keyboard shortcuts: `Ctrl+Tab` / `Ctrl+Shift+Tab` switch tabs, `Ctrl+W` closes the focused pane (or the tab, when it is the last one).
+Split panes: `Ctrl+Shift+D` splits right, `Ctrl+Shift+E` splits down, `Alt+Arrow` moves focus.
 In a terminal: `Ctrl+C` copies the selection (and sends interrupt when nothing is selected), `Ctrl+V` pastes,
-right click copies or pastes; `Ctrl+Shift+C/V` and `Cmd+C/V` on macOS also work.
+right click opens a menu with copy, paste and the split actions; `Ctrl+Shift+C/V` and `Cmd+C/V` on macOS also work.
 In the SFTP browser: `Enter` opens, `F2` renames, `Del` deletes.
 
 ## Install
@@ -125,18 +127,18 @@ internal/
   secret/                encryption at rest: DPAPI (Windows), Keychain / Secret Service + AES-GCM
   sshx/                  dialing, authentication, keep-alive
   knownhosts/            trust-on-first-use verification and known_hosts management
-  terminal/              interactive PTY sessions
+  terminal/              interactive PTY sessions, one per pane
   sftpx/                 dual-pane browsing: local and SFTP filesystems, copies between any two
   tunnel/                local, remote and SOCKS5 port forwarding
   sshconfig/             ~/.ssh/config parser (Include, wildcards, first value wins)
   runner/                one command on many hosts: concurrency, timeout, cancel, streamed output
-  sshtest/               throwaway SSH, SFTP and exec servers for tests
+  sshtest/               throwaway SSH, SFTP, exec and shell servers for tests
   fsutil/                atomic writes, ~ expansion
 frontend/src/
   App.svelte             tabs and navigation
-  views/                 Hosts, Keychain, Tunnels, Snippets, Known Hosts, Terminal, SFTP screens
+  views/                 Hosts, Keychain, Tunnels, Snippets, Known Hosts, Terminal (tab + pane), SFTP screens
   components/            dialogs, forms, icons
-  lib/                   shared types, helpers, snippet run state
+  lib/                   shared types, helpers, pane layout tree, snippet run state
 build/                   icons, Windows installer, macOS Info.plist, Linux packaging
 ```
 
@@ -154,7 +156,7 @@ frontend calls e.g. `HostService.List()` with full TypeScript types. Packages un
 - [x] Import hosts from `~/.ssh/config`
 - [x] Snippets that run one command on several servers
 - [ ] Sync hosts between devices (encrypted, via a folder such as OneDrive / Dropbox)
-- [ ] Split panes
+- [x] Split panes
 
 ## Contributing
 

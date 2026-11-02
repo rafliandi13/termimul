@@ -12,7 +12,7 @@
   import TunnelsView from './views/TunnelsView.svelte'
   import SnippetsView from './views/SnippetsView.svelte'
   import SftpView from './views/SftpView.svelte'
-  import TerminalView from './views/TerminalView.svelte'
+  import TerminalTab from './views/TerminalTab.svelte'
   import type { Status, Tab } from './lib/types'
 
   type Section = 'hosts' | 'keychain' | 'tunnels' | 'snippets' | 'knownhosts'
@@ -24,7 +24,7 @@
   let section = $state<Section>('hosts')
   let groupFilter = $state<string | null>(null)
   let editing = $state<vault.Host | null | undefined>(undefined) // undefined = form closed, null = new host
-  let views: Record<string, TerminalView | SftpView> = {}
+  let views: Record<string, SftpView> = {}
 
   const groups = $derived([...new Set(hosts.map((h) => h.group).filter(Boolean))].sort())
 
@@ -45,7 +45,7 @@
   // Files dropped from Explorer go to the SFTP tab in front, if any.
   function fileDrop(x: number, y: number, paths: string[]) {
     const t = tabs.find((t) => t.id === activeTab)
-    if (t?.kind === 'sftp') (views[t.id] as SftpView | undefined)?.drop(x, y, paths)
+    if (t?.kind === 'sftp') views[t.id]?.drop(x, y, paths)
   }
 
   function close(id: string) {
@@ -59,6 +59,11 @@
   function setStatus(id: string, s: Status) {
     const t = tabs.find((t) => t.id === id)
     if (t) t.status = s
+  }
+
+  function setTitle(id: string, title: string) {
+    const t = tabs.find((t) => t.id === id)
+    if (t) t.title = title
   }
 
   async function removeHost(h: vault.Host) {
@@ -78,9 +83,10 @@
   }
 
   function onkeydown(e: KeyboardEvent) {
-    if (e.ctrlKey && e.key.toLowerCase() === 'w' && activeTab) {
+    // Terminal tabs handle Ctrl+W themselves: it closes the focused pane.
+    if (e.ctrlKey && e.key.toLowerCase() === 'w' && tabs.find((t) => t.id === activeTab)?.kind === 'sftp') {
       e.preventDefault()
-      close(activeTab)
+      close(activeTab!)
     } else if (e.ctrlKey && e.key === 'Tab' && tabs.length) {
       e.preventDefault()
       const order = [null, ...tabs.map((t) => t.id)]
@@ -174,18 +180,19 @@
       <div class="pane" class:hidden={activeTab !== t.id}>
         {#if t.kind === 'sftp'}
           <SftpView bind:this={views[t.id]} tabId={t.id} hostId={t.hostId} {hosts} onstatus={(s) => setStatus(t.id, s)} />
+          {#if t.status === 'closed' || t.status === 'error'}
+            <button class="primary reconnect" onclick={() => views[t.id]?.reconnect()}>Hubungkan ulang</button>
+          {/if}
         {:else}
-          <TerminalView
-            bind:this={views[t.id]}
-            sessionId={t.id}
+          <TerminalTab
+            tabId={t.id}
             hostId={t.hostId}
+            {hosts}
             active={activeTab === t.id}
             onstatus={(s) => setStatus(t.id, s)}
-            onlogout={() => close(t.id)}
+            ontitle={(title) => setTitle(t.id, title)}
+            onclose={() => close(t.id)}
           />
-        {/if}
-        {#if t.status === 'closed' || t.status === 'error'}
-          <button class="primary reconnect" onclick={() => views[t.id]?.reconnect()}>Hubungkan ulang</button>
         {/if}
       </div>
     {/each}
